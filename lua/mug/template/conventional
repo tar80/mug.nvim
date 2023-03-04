@@ -1,0 +1,27 @@
+
+## <type>[optional scope][!]: <description> ######
+##
+## [optional body] #####################################################
+##
+## [optional fotter(s)] ################################################
+#
+## Normal mode #########################################################
+#   ^       toggle spellcheck
+#   <F5>    insert date-time
+#   <F6>    open git diff window horizontally
+#   <F7>    open git diff window vertically
+## Insert mode #########################################################
+# Abbreviations "abbrev<space>" or "abbrev<C-]>"
+#   bu  build          pe  perf
+#   cr  chore          rf  refactor
+#   ds  docs           rv  revert
+#   fe  feat           sy  style
+#   fi  fix            te  test
+#   br  BREAKING CHANGE:
+#   rr  Refs:
+## Command mode ########################################################
+#   :C      commit
+#   :CA     commit amend
+#   :CE     commit empty
+########################################################################
+# vim:ft=gitcommit

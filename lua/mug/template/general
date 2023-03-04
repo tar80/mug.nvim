@@ -1,0 +1,28 @@
+
+## Summarize changes in around 50 characters #####
+##
+## More detailed explanatory text in around 72 characters ##############
+#
+## Normal mode #########################################################
+#   ^       toggle spellcheck
+#   <F5>    insert date-time
+#   <F6>    open git diff window horizontally
+#   <F7>    open git diff window vertically
+## Insert mode #########################################################
+# Abbreviations "string <space>" or "string<C-]>"
+# Adding "e" to a string adds git-emoji
+#   bu[e]  📦Build          ad[e]  🚚Add
+#   cie    👷CI             mv[e]  🚚Move
+#   ds[e]  📚Docs           de[e]  🚚Delete
+#   fi[e]  🐛Fix            rn[e]  🚚Rename
+#   pe[e]  🚀Perf
+#   rf[e]  🔨Refactor
+#   sy[e]  🎨Style
+#   te[e]  🚨Test
+#   ud[e]  ✨Update
+## Command mode ########################################################
+#   :C      commit
+#   :CA     commit amend
+#   :CE     commit empty
+########################################################################
+# vim:ft=gitcommit
