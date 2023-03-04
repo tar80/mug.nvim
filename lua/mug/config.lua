@@ -40,6 +40,7 @@ local function change_settings(opts)
     'diff_position',
     'loclist_position',
     'loclist_disable_column',
+    'filewin_beacon',
     'filewin_indicates_position',
     'index_add_key',
     'index_force_key',

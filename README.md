@@ -274,7 +274,7 @@ require('mug').setup({
   variables = {
     loclist_position = 'left',
     loclist_disable_number = ,
-    filewin_marker = '@@',
+    filewin_beacon = '@@',
     filewin_indicate_position = 'center',
     conflict_begin = '^<<<<<<< ',
     conflict_anc = '^||||||| ',
@@ -616,7 +616,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
       conflict_anc = '^||||||| ',
       conflict_sep = '^=======$',
       conflict_end = '^>>>>>>> ',
-      filewin_marker = '@@',
+      filewin_beacon = '@@',
       filewin_indicate_position = 'center',
       loclist_position = 'left',
       loclist_disable_number = nil,
