@@ -1,4 +1,7 @@
----@see https://github.com/ms-jpq/lua-async-await
+--[[
+-- This code based on the lua-async-await(https://github.com/ms-jpq/lua-async-await)
+-- Under the MIT license
+--]]
 
 ---@class job
 ---@field async function

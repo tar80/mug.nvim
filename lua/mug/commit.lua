@@ -283,6 +283,12 @@ local function open_buffer_post(merged, callback)
     mug_diffcached(true)
   end, 'Open diff-buffer horizontally')
 
+  ---Append 
+  map.buf_set(true, 'n', '<F8>', function()
+    local msg = vim.fn.systemlist(util.gitcmd({cmd = 'log', opts = {'-1', '--oneline', '--format=%B'}}))
+    vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, msg)
+  end, 'Expand head commit message')
+
   if type(callback) == 'function' then
     callback()
   end
