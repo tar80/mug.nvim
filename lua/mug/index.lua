@@ -86,6 +86,10 @@ local function get_stats(bang)
   local err = list[1] == 'Not a git repository' or list[1] == 'fatal:'
   float_height = #list
 
+  for i, v in ipairs(list) do
+    list[i] = ' ' .. v
+  end
+
   return err, list
 end
 
@@ -177,7 +181,7 @@ local function set_extmark(ns, ln)
   }
 
   -- local set = details[type]
-  extmark.select_line(ln, 3, unpack(details[ns]))
+  extmark.select_line(ln, 4, unpack(details[ns]))
   -- set[2] = extmark.select_line(ln, 3, unpack(set))
   -- set = nil
 
@@ -239,7 +243,7 @@ local function input_commit_map()
 end
 
 local function linewise_path()
-  local path = vim.api.nvim_get_current_line():sub(4)
+  local path = vim.api.nvim_get_current_line():sub(5)
   if not util.file_exist(path) then
     path = nil
   end
@@ -322,7 +326,7 @@ local function float_buffer_map()
 
     input_handle = float.input_nc({
       title = 'MugCommit',
-      width = 0.3,
+      width = 54,
       border = 'single',
       relative = 'editor',
       anchor = 'NW',

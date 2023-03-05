@@ -108,12 +108,12 @@ setmetatable(Float, {
       end
 
       if relative == 'editor' then
-        opts.width = math.floor(disp_width * width)
+        opts.width = width > 1 and math.min(disp_width, width) or math.floor(disp_width * width)
         opts.col = math.floor((disp_width - opts.width) / 2)
         opts.height = math.min(disp_height, buf_height)
         opts.row = math.max(1, math.floor((disp_height - opts.height) / 2))
       else
-        opts.width = width or 15
+        opts.width = math.min(disp_width, width) or 15
         opts.col = 1
         opts.height = 1
         opts.row = 1
