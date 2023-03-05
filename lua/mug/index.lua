@@ -83,7 +83,7 @@ end
 local function get_stats(bang)
   local ignore = bang or enable_ignored
   local list = branch_stats(nil, false, ignore)
-  local err = list[1] == 'Not repository' or list[1] == 'fatal:'
+  local err = list[1] == 'Not a git repository' or list[1] == 'fatal:'
   float_height = #list
 
   return err, list

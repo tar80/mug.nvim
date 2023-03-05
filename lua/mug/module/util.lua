@@ -289,7 +289,7 @@ M.belongtoRepo = function(header)
   local path = vim.fs.find('.git', { type = 'directory', upward = true })[1]
 
   if not path then
-    M.notify('Git-repository not found', header, 2)
+    M.notify('Not a git repository', header, 2)
     return false, ''
   end
 

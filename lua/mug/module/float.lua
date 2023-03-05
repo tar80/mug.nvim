@@ -9,6 +9,7 @@ local util = require('mug.module.util')
 ---@field maps function Open MugFloat and display keymaps
 local M = {}
 local HEADER, NAMESPACE = 'mug/float', 'MugFloat'
+local store_keymap
 
 ---@class Mug
 ---@field float_winblend integer MugFloat transparency
@@ -203,7 +204,8 @@ local function float_buffer_autocmd(bufnr, leavecmd)
       local float_exist = util.get_bufs(NAMESPACE .. ':/')
 
       if #float_exist == 1 then
-        vim.keymap.del('n', '<C-w>p')
+        pcall(vim.fn.mapset, 'n', false, store_keymap)
+        store_keymap = nil
       end
 
       if leavecmd then
@@ -235,9 +237,11 @@ M.open = function(tbl)
   end
 
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
+  local keymap = '<C-w>p'
+  store_keymap = vim.fn.maparg(keymap, 'n', false, true)
 
   vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
-  vim.keymap.set('n', '<C-w>p', function()
+  vim.keymap.set('n', keymap, function()
     local bufs = util.get_bufs(NAMESPACE .. ':/')
     local handle = 0
 

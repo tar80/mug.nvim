@@ -195,7 +195,6 @@ local function mug_diffcached(vertical)
 
   if diffcached_bufnr[pwd] then
     local bufnr = diffcached_bufnr[pwd]
-    vim.pretty_print(bufnr)
 
     if vim.api.nvim_buf_is_valid(bufnr) then
       if vim.fn.buflisted(bufnr) == 0 then

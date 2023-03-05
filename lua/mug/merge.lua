@@ -4,7 +4,7 @@ local job = require('mug.module.job')
 local branch_name = require('mug.branch').branch_name
 local commit_buffer = require('mug.commit').commit_buffer
 
-local HEADER = 'mug/merge'
+local HEADER, NAMESPACE = 'mug/merge', 'MugMerge'
 local comp_on_process = { '--abort', '--continue', '--quit' }
 
 local function do_fetch(command)
@@ -127,7 +127,7 @@ local function complist(_, l)
 end
 
 local function mug_merge(name)
-  vim.api.nvim_create_user_command('MugMerge' .. name, function(opts)
+  vim.api.nvim_create_user_command(NAMESPACE .. name, function(opts)
     local cmdspec = name == '' and '--no-ff' or '--ff-only'
     local pwd = util.pwd()
     local merge_msg = pwd .. '/.git/MERGE_MSG'
@@ -168,7 +168,7 @@ local function mug_merge(name)
   })
 end
 
-vim.api.nvim_create_user_command('MugMergeTo', function(opts)
+vim.api.nvim_create_user_command(NAMESPACE .. 'To', function(opts)
   local force = opts.bang and '--force' or ''
   local branchspec = vim.b.mug_branch_name .. ':' .. opts.args
 

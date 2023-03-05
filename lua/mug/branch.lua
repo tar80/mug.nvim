@@ -105,7 +105,8 @@ local function get_branch_stats(root, chain, ignore)
   end
 
   local ignored = ignore and '--ignored' or ''
-  local cmdline = util.gitcmd({ wd = root, noquotepath = true, cmd = 'status', opts = { '-b', ignored, '--porcelain' } })
+  local cmdline =
+    util.gitcmd({ wd = root, noquotepath = true, cmd = 'status', opts = { '-b', ignored, '--porcelain' } })
   local stdout = util.get_stdout(table.concat(cmdline, ' '))
   local list = vim.split(stdout, '\n')
   stdout = nil
@@ -168,7 +169,8 @@ M.branch_stats = function(root, response, ignore)
   end
 
   if branch_cache[root] == nil then
-    return response and util.notify('Not repository', HEADER, 3) or { 'Not repository' }
+    local msg = 'Not a git repository'
+    return response and util.notify(msg, HEADER, 3) or { msg }
   end
 
   local result, list = get_branch_stats(root, false, ignore)

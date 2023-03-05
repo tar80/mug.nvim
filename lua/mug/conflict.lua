@@ -394,7 +394,7 @@ local function on_attach(files)
   end, 'get contents (theirs)')
   map.buf_set(true, 'n', '<CR>', function()
     adjust_filewin(true)
-  end)
+  end, 'Toggle position between ours and theirs')
 end
 
 ---@param bufnr number Loclist filewin number
