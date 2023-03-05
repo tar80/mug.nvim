@@ -13,7 +13,7 @@ mug(mixed utilities for git)は、neovim 上で git を操作するためのコ�
 
 ```lua:packer.nvim
 use({ 'tar80/mug.nvim',
-  setup = function()
+  config = function()
     require('mug').setup({
     ...,
     variables = {
