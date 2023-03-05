@@ -194,9 +194,9 @@ require('mug').setup({
 require('mug').setup({
   commit = true,
   variables = {
-  strftime = '%c',
-  commit_notation = 'none',
-  commit_diffcached_height = 20,
+    strftime = '%c',
+    commit_notation = 'none',
+    commit_diffcached_height = 20,
   }
 })
 ```
@@ -280,7 +280,7 @@ require('mug').setup({
     conflict_anc = '^||||||| ',
     conflict_sep = '^=======$',
     conflict_end = '^>>>>>>> '
-    }
+  }
 })
 ```
 
@@ -346,7 +346,7 @@ require('mug').setup({
   diff = true,
   variables = {
     diff_position = ,
-    }
+  }
 })
 ```
 
@@ -416,12 +416,12 @@ require('mug').setup({
 require('mug').setup({
   index = true,
   variables = {
-  index_add_key = 'a',
-  index_force_key = 'f',
-  index_reset_key = 'r',
-  index_clear_key = 'c',
-  index_input_bar = '@',
-  index_commit = '`',
+    index_add_key = 'a',
+    index_force_key = 'f',
+    index_reset_key = 'r',
+    index_clear_key = 'c',
+    index_input_bar = '@',
+    index_commit = '`',
   }
 })
 ```
@@ -443,7 +443,7 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 |   gf    | 行のパスを開く                |
 |   gd    | 行のパスを`MugDiff`           |
 |    @    | コミットメッセージ入力バー    |
-| shift+@ | 'MugCommit'を実行             |
+| shift+@ | `MugCommit`を実行             |
 
 **variables**
 

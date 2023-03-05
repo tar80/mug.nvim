@@ -242,7 +242,7 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
     post = show_syntax,
   }).handle
 end, {
-  nargs = '?',
+  nargs = '+',
   bang = true,
   complete = function(a, _, _)
     if vim.startswith(a, '$') then
