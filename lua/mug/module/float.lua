@@ -2,6 +2,7 @@ local map = require('mug.module.map')
 local util = require('mug.module.util')
 
 ---@class float
+---@filed title function Adjust float title
 ---@field open function Open MugFloat buffer
 ---@field input function Open MugFloat input-bar without fade highlighting
 ---@field input_nc function Open MugFloat input-bar with fade highlighting
@@ -51,6 +52,20 @@ local Float = {
 
 local get_global = vim.api.nvim_get_option
 
+---@param title string Float title
+---@param width number Float width
+---@return string # Adjusted float title
+M.title = function(title, width)
+  title = ' ' .. title .. ' '
+  local title_len = vim.api.nvim_strwidth(title)
+
+  if title_len > width then
+    title = title:sub(1, math.max(1, title_len - 13)) .. '... '
+  end
+
+  return title
+end
+
 setmetatable(Float, {
   __index = {
     ---@param title string window title
@@ -73,7 +88,6 @@ setmetatable(Float, {
       local disp_height = get_global('lines') - lastline
       local buf_height
 
-      opts.title = ' ' .. (title or HEADER) .. ' '
       opts.border = border or opts.border
       opts.relative = relative or opts.relative
       opts.anchor = anchor or opts.anchor
@@ -101,7 +115,8 @@ setmetatable(Float, {
             max_digit = math.max(max_digit, vim.api.nvim_strwidth(value) + 1)
           end
 
-          width = math.max(width or 0, max_digit / disp_width)
+          max_digit = math.min(max_digit, disp_width) / disp_width
+          width = math.max(width or 0, max_digit)
           buf_height = vim.tbl_count(contents)
           vim.api.nvim_buf_set_lines(bufnr, 0, buf_height, false, contents)
         end
@@ -119,11 +134,7 @@ setmetatable(Float, {
         opts.row = 1
       end
 
-      local title_len = vim.api.nvim_strwidth(opts.title)
-
-      if title_len > opts.width then
-        opts.title = opts.title:sub(1, math.max(1, title_len - 13)) .. '... '
-      end
+      opts.title = M.title(title or HEADER, opts.width)
 
       return { bufnr = bufnr, opts = opts }
     end,
