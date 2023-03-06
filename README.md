@@ -197,6 +197,7 @@ require('mug').setup({
     strftime = '%c',
     commit_notation = 'none',
     commit_diffcached_height = 20,
+    commit_gpg_sign = nil
   }
 })
 ```
@@ -210,6 +211,10 @@ require('mug').setup({
 - `empty` 空コミットを作成します。コミットメッセージには"empty commit(created by mug)"が設定されます。
 - `fixup` コミット選択フローティングウィンドウが起動します。\<CR>で選択したコミットを対象にコミットメッセージ"fixup! \<commit>"が設定されます。
 - `m <commit-message>` 直接コミットメッセージを入力できます。スペースを含む場合でも""で括る必要はありません。
+
+**:MugCommitSign[!] [\<sub-command>] [\<commit-message>]**
+
+オプション`--gpg-sign`を付加します。使用する署名を指定する場合は、variables に`commit_gpg_sign`を設定します。
 
 **コミット編集バッファ**
 
@@ -253,6 +258,11 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 - commit_diffcached_height (上書き)
 
   `<F6>`で開く差分バッファの高さを指定します。
+
+- commit_gpg_sign (上書き)
+
+  署名に使用する鍵(gpg)を指定します。  
+  指定しない場合はデフォルト(コミッターID)になります。
 
 **highlights**
 
@@ -445,6 +455,13 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 |   gd    | 行のパスを`MugDiff`           |
 |    @    | コミットメッセージ入力バー    |
 | shift+@ | `MugCommit`を実行             |
+
+コミットインプットバー
+
+|     キー     | 説明                           |
+| :----------: | :----------------------------- |
+| \<C-o>\<C-s> | オプション`--gpg-sign`をトグル |
+| \<C-o>\<S-a> | オプション`--amend`をトグル    |
 
 **variables**
 
