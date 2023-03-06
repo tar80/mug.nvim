@@ -7,6 +7,7 @@ local timer = require('mug.module.timer')
 local branch_stats = require('mug.branch').branch_stats
 
 local HEADER, NAMESPACE = 'mug/index', 'MugIndex'
+local INPUT_TITLE, INPUT_WIDTH = 'Commit', 54
 local add_lines, reset_lines, force_lines = {}, {}, {}
 local float_handle, input_handle = 0, 0
 local float_height = 2
@@ -230,10 +231,38 @@ local function add_this(direction)
   end
 end
 
+local function update_imputbar_title(title, keyid, sign, amend)
+  local new_title = { title }
+
+  if #sign > 0 then
+    table.insert(new_title, keyid)
+  end
+
+  if #amend > 0 then
+    table.insert(new_title, '--amend')
+  end
+
+  title = float.title(table.concat(new_title, ' '), INPUT_WIDTH)
+  vim.api.nvim_win_set_config(0, { title_pos = 'center', title = title })
+end
+
 local function input_commit_map()
+  local sign, amend = {}, {}
+  local title = vim.api.nvim_win_get_config(0).title[1][1]
+  title = title:sub(2, #title - 1)
+  local keyid = _G.Mug.commit_gpg_sign and '--gpg-sign=' .. _G.Mug.commit_gpg_sign or '--gpg-sign'
+
+  vim.keymap.set('i', '<C-o><C-s>', function()
+    sign = #sign == 0 and { keyid } or {}
+    update_imputbar_title(title, keyid, sign, amend)
+  end, { buffer = true })
+  vim.keymap.set('i', '<C-o><C-a>', function()
+    amend = #amend == 0 and { '--amend' } or {}
+    update_imputbar_title(title, keyid, sign, amend)
+  end, { buffer = true })
   vim.keymap.set('i', '<CR>', function()
     local input = vim.api.nvim_get_current_line()
-    local cmdline = util.gitcmd({ cmd = 'commit', opts = { '--cleanup=default', '-m' .. input } })
+    local cmdline = util.gitcmd({ cmd = 'commit', opts = { sign, amend, '--cleanup=default', '-m' .. input } })
 
     vim.api.nvim_command('stopinsert!|quit')
     local stdout = vim.fn.systemlist(cmdline)
@@ -325,8 +354,8 @@ local function float_buffer_map()
     end
 
     input_handle = float.input_nc({
-      title = 'MugCommit',
-      width = 54,
+      title = INPUT_TITLE,
+      width = INPUT_WIDTH,
       border = 'single',
       relative = 'editor',
       anchor = 'NW',

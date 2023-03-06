@@ -33,6 +33,7 @@ local function change_settings(opts)
     'commit_diffcached_height',
     'commit_initial_msg',
     'commit_notation',
+    'commit_gpg_sign',
     'conflict_begin',
     'conflict_anc',
     'conflict_sep',

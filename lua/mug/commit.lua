@@ -14,6 +14,9 @@ local COMMIT_BUFFER_URI = 'Mug://commit'
 local DIFFCACHED_URI = 'Mug://diffcached'
 local TEMPLATE_DIR = _G.Mug.root .. '/lua/mug/template/'
 
+---@type boolean|nil Put gpg signature
+local signature
+
 ---@type table {cwd: bufnr}
 local diffcached_bufnr = {}
 local float_handle = 0
@@ -22,6 +25,7 @@ local float_handle = 0
 ---@field strftime string Date-time formats. that can be inserted when editing a commit-message
 ---@field commit_notation string Notation used to prefix commit-message
 ---@field commit_diffcached_height integer Diffcached buffer height
+---@field commit_gpg_sign string Specify gpg sign keyid
 _G.Mug._def('strftime', '%c', true)
 _G.Mug._def('commit_notation', 'none', true)
 _G.Mug._def('commit_diffcached_height', 20, true)
@@ -91,7 +95,9 @@ end
 ---@return table # Git command and options
 local function create_gitcmd(editmsg, optspec, msgspec, commitmsg)
   local cmd = 'commit'
-  local mid = { '' }
+  local sign = _G.Mug.commit_gpg_sign and '--gpg-sign=' .. _G.Mug.commit_gpg_sign or '--gpg-sign'
+  local pre = signature and { sign } or {}
+  local mid = {}
   local post = { '--cleanup=strip', '--file=' .. editmsg }
   local opt = {
     amend = { '--amend' },
@@ -112,7 +118,7 @@ local function create_gitcmd(editmsg, optspec, msgspec, commitmsg)
     post = msg[optspec]
   end
 
-  return util.gitcmd({ noquotepath = true, cmd = cmd, opts = { mid, post } })
+  return util.gitcmd({ noquotepath = true, cmd = cmd, opts = { pre, mid, post } })
 end
 
 ---Write the edited contents to the COMMIT_EDITMSG in the repository and execute the command
@@ -137,6 +143,7 @@ local function create_commit(optspec, msgspec, commitmsg)
   job.async(function()
     local cmd = create_gitcmd(editmsg, optspec, msgspec, commitmsg)
     local stdout, err = job.await(cmd)
+    signature = nil
 
     util.notify(stdout, HEADER, err, true)
     -- util.notify(vim.trim(table.concat(result, '\n')), HEADER, err, true)
@@ -283,9 +290,9 @@ local function open_buffer_post(merged, callback)
     mug_diffcached(true)
   end, 'Open diff-buffer horizontally')
 
-  ---Append 
+  ---Append
   map.buf_set(true, 'n', '<F8>', function()
-    local msg = vim.fn.systemlist(util.gitcmd({cmd = 'log', opts = {'-1', '--oneline', '--format=%B'}}))
+    local msg = vim.fn.systemlist(util.gitcmd({ cmd = 'log', opts = { '-1', '--oneline', '--format=%B' } }))
     vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, msg)
   end, 'Expand head commit message')
 
@@ -334,7 +341,7 @@ M.commit_buffer = function(merged)
   local branch = vim.api.nvim_buf_get_var(0, 'mug_branch_name')
   local branch_info = vim.api.nvim_buf_get_var(0, 'mug_branch_info')
   local stats = vim.api.nvim_buf_get_var(0, 'mug_branch_stats')
-  local staged = stats and (stats.s or 0) or 0
+  local staged = stats and stats.s or 0
 
   vim.api.nvim_command('silent -tabnew ' .. filename)
 
@@ -415,81 +422,88 @@ local function fixup_buffer_attach()
 end
 
 ---User command "MugCommit"
-vim.api.nvim_create_user_command(NAMESPACE, function(opts)
-  if float.focus(float_handle) then
-    return
-  end
+local function mug_commit(name)
+  vim.api.nvim_create_user_command(NAMESPACE .. name, function(opts)
+    signature = name == 'Sign'
 
-  if not util.isRepo(HEADER) then
-    return
-  end
-
-  if opts.bang then
-    local log = vim.fn.system({ 'git', '-C', util.pwd(), 'add', '.' })
-
-    if vim.v.shell_error == 1 then
-      util.notify(log, HEADER, 3)
-      return
-    end
-  end
-
-  if opts.args == 'amend' then
-    create_commit('amend', true)
-    return
-  end
-
-  if opts.args == 'empty' then
-    create_commit('empty', true)
-    return
-  end
-
-  if opts.args == 'fixup' then
-    branch_stats()
-
-    if vim.b.mug_branch_stats.s == 0 then
-      util.notify('Index is clean', HEADER, 3)
+    if float.focus(float_handle) then
       return
     end
 
-    float_handle = float.open({
-      title = NAMESPACE .. ' Fixup',
-      height = 3,
-      width = 0.7,
-      border = 'single',
-      contents = get_git_log,
-      post = fixup_buffer_attach,
-    }).handle
-    return
-  end
-
-  if opts.fargs[1] == 'm' then
-    if #opts.fargs == 1 then
-      util.notify('Argument "m" requires commit-message', HEADER, 3)
+    if not util.isRepo(HEADER) then
       return
     end
 
-    local msg_tbl = vim.deepcopy(opts.fargs)
-    table.remove(msg_tbl, 1)
-    local msg = table.concat(msg_tbl, ' ')
+    if opts.bang then
+      local log = vim.fn.system({ 'git', '-C', util.pwd(), 'add', '.' })
 
-    create_commit('m', true, { msg })
-    return
-  end
-
-  M.commit_buffer()
-end, {
-  nargs = '*',
-  bang = true,
-  complete = function(a, l, _)
-    local input = vim.split(l, ' ')
-    local list = input[1]:find('!', 1, true) and { 'amend', 'fixup' } or { 'amend', 'fixup', 'empty' }
-
-    if input[2] ~= 'm' then
-      return comp.filter(a, l, list)
-    else
-      return comp.filter(a, l, comp.commit_prefix())
+      if vim.v.shell_error == 1 then
+        util.notify(log, HEADER, 3)
+        return
+      end
     end
-  end,
-})
+
+    if opts.args == 'amend' then
+      create_commit('amend', true)
+      return
+    end
+
+    if opts.args == 'empty' then
+      create_commit('empty', true)
+      return
+    end
+
+    if opts.args == 'fixup' then
+      branch_stats()
+
+      if vim.b.mug_branch_stats.s == 0 then
+        util.notify('Index is clean', HEADER, 3)
+        return
+      end
+
+      float_handle = float.open({
+        title = NAMESPACE .. ' Fixup',
+        height = 3,
+        width = 0.7,
+        border = 'single',
+        contents = get_git_log,
+        post = fixup_buffer_attach,
+      }).handle
+      return
+    end
+
+    if opts.fargs[1] == 'm' then
+      if #opts.fargs == 1 then
+        util.notify('Argument "m" requires commit-message', HEADER, 3)
+        return
+      end
+
+      local msg_tbl = vim.deepcopy(opts.fargs)
+      table.remove(msg_tbl, 1)
+      local msg = table.concat(msg_tbl, ' ')
+
+      create_commit('m', true, { msg })
+      return
+    end
+
+    M.commit_buffer()
+  end, {
+    nargs = '*',
+    bang = true,
+    complete = function(a, l, _)
+      local input = vim.split(l, ' ')
+      local list = input[1]:find('!', 1, true) and { 'amend', 'fixup' } or { 'amend', 'fixup', 'empty' }
+
+      if input[2] ~= 'm' then
+        return comp.filter(a, l, list)
+      else
+        return comp.filter(a, l, comp.commit_prefix())
+      end
+    end,
+  })
+end
+
+mug_commit('')
+mug_commit('Sign')
 
 return M
