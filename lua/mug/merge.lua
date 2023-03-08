@@ -58,7 +58,7 @@ local function do_merge(ff, pwd, command)
     if err == 2 then
       branch_name(pwd)
 
-      if ff == '' then
+      if ff == '' and #stdout > 0 then
         if vim.b.mug_branch_stats.u > 0 and package.loaded['mug.conflict'] then
           choice = util.confirm(stdout, 'Open loclist\nAbort merging\nCancel', 1, HEADER)
 
@@ -70,7 +70,7 @@ local function do_merge(ff, pwd, command)
           end
 
           return nil
-        elseif #stdout > 0 and stdout[1] ~= 'Already up to date.' then
+        elseif stdout[1] ~= 'Already up to date.' then
           choice = util.confirm('Merge completed. Edit commit-message?', 'Yes\nNo', 1, HEADER, true)
 
           if choice == 1 then
