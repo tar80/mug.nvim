@@ -6,13 +6,31 @@ mug(mixed utilities for git)は、neovim 上で git を操作するためのコ�
 ## 動作条件
 
 - Neovim >= 0.9
+- Git >= 2.39.2
 
 ## インストール
+
+- lazy.nvim
+
+```lua:lazy.nvim
+{ 'tar80/mug.nvim',
+  event = 'UIEnter',
+  config = function()
+    require('mug').setup({
+    ...,
+    variables = {
+      ...
+      },
+    })
+  end,
+}
+```
 
 - packer.nvim
 
 ```lua:packer.nvim
 use({ 'tar80/mug.nvim',
+  event = 'UIEnter',
   config = function()
     require('mug').setup({
     ...,
@@ -262,7 +280,7 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 - commit_gpg_sign (上書き)
 
   署名に使用する鍵(gpg)を指定します。  
-  指定しない場合はデフォルト(コミッターID)になります。
+  指定しない場合はデフォルト(コミッター ID)になります。
 
 **highlights**
 
@@ -456,12 +474,12 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 |    @    | コミットメッセージ入力バー    |
 | shift+@ | `MugCommit`を実行             |
 
-コミットインプットバー
+コミット入力バー
 
 |     キー     | 説明                           |
 | :----------: | :----------------------------- |
 | \<C-o>\<C-s> | オプション`--gpg-sign`をトグル |
-| \<C-o>\<S-a> | オプション`--amend`をトグル    |
+| \<C-o>\<C-a> | オプション`--amend`をトグル    |
 
 **variables**
 
@@ -473,7 +491,7 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 
   行選択(Force stage)に使用するキーを指定します。
 
-- index_reset_kye (上書き)
+- index_reset_key (上書き)
 
   行選択(Reset)に使用するキーを指定します。
 
@@ -557,7 +575,7 @@ require('mug').setup({
 - remote_url (上書き)
 
   リモートブランチの URL。HTTPS または、SSH を指定します。  
-  未設定の場合、上流ブランチの設定は失敗します。
+  未設定の場合、上流ブランチの設定に失敗します。
 
 - commit_initial_message (上書き)
 
@@ -628,6 +646,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
       strftime = '%c',
       commit_notation = 'none',
       commit_diffcached_height = 20,
+      commit_gpg_sign = nil,
 
       -- Conflict
       conflict_begin = '^<<<<<<< ',
