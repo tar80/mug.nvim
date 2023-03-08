@@ -90,10 +90,10 @@ end
 ---@return boolean # The comparison target is the same file
 local function adjust_path(path)
   local cwd = vim.loop.cwd():gsub('\\', '/')
-  local current_edit = vim.fn.expand('%'):gsub('\\','/')
-  local pathspec = vim.fn.resolve(vim.fn.expand(path)):gsub('\\', '/')
+  local current_file = vim.fn.expand('%'):gsub('\\', '/')
+  local pathspec = vim.loop.fs_realpath(vim.fn.expand(path)):gsub('\\', '/')
   pathspec = pathspec:find(cwd, 1, true) and pathspec:sub(#cwd + 2) or pathspec
-  local is_same = pathspec == current_edit
+  local is_same = pathspec == current_file
 
   return pathspec, is_same
 end
@@ -198,7 +198,7 @@ local mug_diff = function(name)
   end, {
     nargs = '*',
     complete = function(a, l, _)
-      local input = #vim.split(l, ' ')
+      local input = #vim.split(l, ' ', { plain = true })
 
       if input == 2 then
         return comp.filter(a, l, { 'top', 'bottom', 'left', 'right' })

@@ -491,7 +491,7 @@ local function mug_commit(name)
     nargs = '*',
     bang = true,
     complete = function(a, l, _)
-      local input = vim.split(l, ' ')
+      local input = vim.split(l, ' ', { plain = true })
       local list = input[1]:find('!', 1, true) and { 'amend', 'fixup' } or { 'amend', 'fixup', 'empty' }
 
       if input[2] ~= 'm' then

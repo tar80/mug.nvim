@@ -113,7 +113,7 @@ local function complist(_, l)
     return comp_on_process
   end
 
-  local input = vim.split(l, ' ')
+  local input = vim.split(l, ' ', { plain = true })
 
   if #input <= 2 then
     return comp.branches()

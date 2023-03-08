@@ -10,6 +10,7 @@
 #   <F5>    insert date-time
 #   <F6>    open git diff window horizontally
 #   <F7>    open git diff window vertically
+#   <F8>    insert commit message (HEAD)
 ## Insert mode #########################################################
 # Abbreviations "abbrev<space>" or "abbrev<C-]>"
 #   bu  build          pe  perf

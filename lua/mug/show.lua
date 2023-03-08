@@ -47,13 +47,13 @@ local function str_to_tbl(literals)
   literals = literals:gsub('^%s*[{[]%s*(.+)[}%]]%s*$', '%1')
 
   if literals:find(',', 1, true) then
-    local t = vim.split(literals, ',')
+    local t = vim.split(literals, ',', { plain = true })
 
     for _, v in ipairs(t) do
       if v:find('[{[]') then
         table.insert(tbl, str_to_tbl(v))
       elseif v:find('=', 1, true) then
-        v = vim.split(v)
+        v = vim.split(v, '=', { plain = true })
         tbl[vim.trim(v[1])] = define_type(vim.trim(v[2]))
       else
         table.insert(tbl, define_type(vim.trim(v)))
@@ -66,25 +66,6 @@ local function str_to_tbl(literals)
   return tbl
 end
 
----Extract elements from literals and convert them to table-array
--- @param literals string
--- @return table
--- local function str_to_array(literals)
---   local tbl = {}
-
---   if literals:find(',', 1, true) then
---     local t = vim.split(literals, ',')
-
---     for _, v in ipairs(t) do
---       table.insert(tbl, define_type(vim.trim(v)))
---     end
---   else
---     tbl = { define_type(literals) }
---   end
-
---   return tbl
--- end
-
 ---Convert literals to fit function and parameter
 ---@param presented string MugShow option
 ---@param obj string function source
@@ -93,7 +74,7 @@ local function makeup_func(presented, obj)
   local arg_tbl = {}
   local delim = 'm9^~^'
   local s = presented:gsub('^(.+)%((.*)%)$', '%1' .. delim .. '%2')
-  s = vim.split(s, delim)
+  s = vim.split(s, delim, { plain = true })
   local func = vim[obj][s[1]]
 
   if s[2] == '' then
@@ -101,23 +82,13 @@ local function makeup_func(presented, obj)
   end
 
   arg_tbl = str_to_tbl(s[2])
-  -- arg_tbl = s[2]:find('[{[]') and str_to_obj(s[2]) or str_to_array(s[2])
-  -- if s[2]:find('[{[]') then
-  --   arg_tbl = str_to_obj(s[2])
-  -- else
-  --   arg_tbl = str_to_array(s[2])
-  -- end
-
-  -- if not arg_tbl then
-  --   return func()
-  -- end
 
   return vim.tbl_isempty(arg_tbl) and func(arg_tbl) or func(unpack(arg_tbl))
 end
 
 local function expand_obj(obj, literals)
   local o = obj
-  local elements = vim.split(literals, '%.')
+  local elements = vim.split(literals, '.', { plain = true })
 
   for _, v in ipairs(elements) do
     o = o[v]
@@ -134,7 +105,7 @@ local function makeup_vimfunc(presented)
   local s = { presented }
 
   if presented:sub(-1) == ')' then
-    s = vim.split(presented:sub(1, -2), '%(')
+    s = vim.split(presented:sub(1, -2), '(', { plain = true })
   end
 
   local vimfunc = expand_obj(vim, s[1])
@@ -147,12 +118,6 @@ local function makeup_vimfunc(presented)
     return vimfunc()
   else
     arg_tbl = str_to_tbl(s[2])
-    -- arg_tbl = s[2]:find('[{[]') and str_to_obj(s[2]) or str_to_array(s[2])
-    -- if s[2]:find('[{[]') then
-    --   arg_tbl = str_to_obj(s[2])
-    -- else
-    --   arg_tbl = str_to_array(s[2])
-    -- end
   end
 
   return vim.tbl_isempty(arg_tbl) and vimfunc() or vimfunc(unpack(arg_tbl))
@@ -162,9 +127,9 @@ local function get_value(opts)
   if opts.bang then
     return vim.fn.systemlist(opts.args)
   elseif opts.args:match('^:') then
-    return vim.fn.trim(vim.api.nvim_exec(opts.args:sub(2), {})):gsub('\n', ',')
+    return vim.trim(vim.api.nvim_exec(opts.args:sub(2), {})):gsub('\n', ',')
   elseif opts.args:match('^[bwtgv]:') then
-    local v = vim.split(opts.args:gsub('(.):(.+)', '%1,%2'), ',')
+    local v = vim.split(opts.args:gsub('(.):(.+)', '%1,%2'), ',', { plain = true })
     return vim[v[1]][v[2]]
   elseif opts.args:match('^$%w+') then
     return vim.env[opts.args:sub(2)]:gsub(';', ',')
@@ -188,7 +153,7 @@ local function get_value(opts)
     return notify(output, HEADER, 3)
   end
 
-  return vim.fn.trim(output):gsub('\n', ',')
+  return vim.trim(output):gsub('\n', ',')
 end
 
 vim.api.nvim_create_user_command(NAMESPACE, function(opts)
@@ -211,7 +176,7 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
     local adjust_line = {}
 
     if type(result) ~= 'table' then
-      result = vim.split(tostring(result), ',')
+      result = vim.split(tostring(result), ',', { plain = true })
     end
 
     local format = vim.tbl_keys(result)[1] == 1 and function(_)
