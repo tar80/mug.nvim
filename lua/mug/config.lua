@@ -48,7 +48,10 @@ local function change_settings(opts)
     'index_reset_key',
     'index_clear_key',
     'index_inputbar',
-    'index_commit'
+    'index_commit',
+    'term_shell',
+    'term_height',
+    'term_width',
   }
   local unknown = {}
 

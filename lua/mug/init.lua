@@ -83,6 +83,7 @@ function mug.setup(options)
     'merge',
     'show',
     'mkrepo',
+    'terminal',
   }
 
   _G.Mug._def('edit_command', 'Edit', true)
@@ -157,6 +158,7 @@ function mug.reload()
     'mug.show',
     'mug.mkrepo',
     'mug.index',
+    'mug.terminal',
     'mug.workspace',
   }
 

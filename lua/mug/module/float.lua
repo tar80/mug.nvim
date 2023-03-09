@@ -3,21 +3,23 @@ local util = require('mug.module.util')
 
 ---@class float
 ---@filed title function Adjust float title
----@field open function Open MugFloat buffer
+---@field open function Open MugFloat window
+---@filed term function Open MugTerm window
 ---@field input function Open MugFloat input-bar without fade highlighting
 ---@field input_nc function Open MugFloat input-bar with fade highlighting
 ---@field focus function Focus MugFloat
 ---@field maps function Open MugFloat and display keymaps
 local M = {}
-local HEADER, NAMESPACE = 'mug/float', 'MugFloat'
+local HEADER = 'mug/float'
+local namespace = 'MugFloat'
 local store_keymap
 
 ---@class Mug
----@field float_winblend integer MugFloat transparency
+---@field float_winblend integer MugFloat/MugTerm transparency
 _G.Mug._def('float_winblend', 0, true)
 
 ---Disable highlighting for floating-window when navigating to input-bar
-local ns_inputbar = vim.api.nvim_create_namespace(NAMESPACE)
+local ns_inputbar = vim.api.nvim_create_namespace(namespace)
 
 do
   local normal_bg = vim.api.nvim_get_hl_by_name('Normal', true).background
@@ -34,12 +36,24 @@ do
   end
 end
 
+---@alias float_relative string Layout the float to place at
+---@alias float_anchor string Decides which corner of the float to place at
+---@alias float_style string Configure the appearance of the window
+---@alias float_title string Window title
+---@alias float_title_pos string Title position
+---@alias float_noautocmd boolean Skip autocmd events
+---@alias float_height number Number of lines
+---@alias float_width number Window width or ratio
+---@alias float_border string Window border
+---@alias float_zindex number Floats stacking order
+---@alias float_callback function Content expanded in window
+
 ---@class Float
----@field private relative string
----@field private anchor string
----@field private style string
----@field private title_pos string
----@field private noautocmd boolean
+---@field private relative float_relative
+---@field private anchor float_anchor
+---@field private style float_style
+---@field private title_pos float_title_pos
+---@field private noautocmd float_noautocmd
 ---@field private _new function
 local Float = {
   style = 'minimal',
@@ -66,32 +80,55 @@ M.title = function(title, width)
   return title
 end
 
+---@return number # Float max width
+---@return number # Float max height
+local function max_range()
+  local lastline = get_global('cmdheight')
+    + (get_global('laststatus') == 0 and 0 or 1)
+    + (get_global('showtabline') == 0 and 0 or 1)
+    + 2
+  local w = get_global('columns')
+  local h = get_global('lines') - lastline
+
+  return w, h
+end
+
+local function buf_close(bufnr, title, reason)
+  vim.api.nvim_command('close ' .. bufnr)
+  vim.notify('[' .. title .. '] ' .. reason)
+end
+
 setmetatable(Float, {
   __index = {
-    ---@param title string window title
-    ---@param height integer window number of lines
-    ---@param width number window width ratio
-    ---@param border? string window border `single`|`double`|`rounded`|`solid`|`shadow`
-    ---@param callback? function content expanded on window
+    ---@param title float_title
+    ---@param height float_height
+    ---@param width float_width
+    ---@param border? float_border `single`|`double`|`rounded`|`solid`|`shadow`
+    ---@param relative float_relative
+    ---@param anchor float_anchor
+    ---@param zindex float_zindex
+    ---@param callback? float_callback
     ---@return table|nil
     _new = function(self, title, height, width, border, relative, anchor, zindex, callback)
       local opts = vim.deepcopy(self)
       local bufnr = vim.api.nvim_create_buf(false, true)
-
-      vim.api.nvim_buf_set_name(bufnr, NAMESPACE .. ':/' .. title)
-      vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
-      local lastline = get_global('cmdheight')
-        + (get_global('laststatus') == 0 and 0 or 1)
-        + (get_global('showtabline') == 0 and 0 or 1)
-        + 2
-      local disp_width = get_global('columns')
-      local disp_height = get_global('lines') - lastline
+      local disp_width, disp_height = max_range()
       local buf_height
 
       opts.border = border or opts.border
       opts.relative = relative or opts.relative
       opts.anchor = anchor or opts.anchor
       opts.zindex = zindex
+
+      if type(callback) == 'string' then
+        opts.width = math.floor(disp_width * width)
+        opts.height = math.floor(disp_height * height)
+        opts.col = math.floor((disp_width - opts.width) / 2)
+        opts.row = math.max(1, math.floor((disp_height - opts.height) / 2))
+        opts.title = M.title(table.concat({ title, callback }, ' '), opts.width)
+
+        return { bufnr = bufnr, opts = opts }
+      end
 
       if not callback then
         buf_height = height
@@ -102,11 +139,13 @@ setmetatable(Float, {
           vim.api.nvim_buf_set_lines(bufnr, 0, height, false, { contents })
         else
           if vim.tbl_isempty(contents) == 0 then
-            return vim.notify('[' .. title .. '] empty')
+            buf_close(bufnr, title, 'empty')
+            return
           end
 
           if vim.tbl_count(contents) <= 1 and table.concat(contents, ''):match('^%s*$') then
-            return vim.notify('[' .. title .. '] nil')
+            buf_close(bufnr, title, 'nil')
+            return
           end
 
           local max_digit = 1
@@ -124,24 +163,25 @@ setmetatable(Float, {
 
       if relative == 'editor' then
         opts.width = width > 1 and math.min(disp_width, width) or math.floor(disp_width * width)
-        opts.col = math.floor((disp_width - opts.width) / 2)
         opts.height = math.min(disp_height, buf_height)
+        opts.col = math.floor((disp_width - opts.width) / 2)
         opts.row = math.max(1, math.floor((disp_height - opts.height) / 2))
       else
         opts.width = math.min(disp_width, width) or 15
-        opts.col = 1
         opts.height = 1
+        opts.col = 1
         opts.row = 1
       end
 
       opts.title = M.title(title or HEADER, opts.width)
+      vim.api.nvim_buf_set_name(bufnr, namespace .. '://' .. title)
 
       return { bufnr = bufnr, opts = opts }
     end,
   },
 })
 
-local function float_buffer_cmd_and_map()
+local function float_win_cmd_and_map()
   vim.api.nvim_buf_create_user_command(0, 'MMMugFloatMove', function(opts)
     local direction = {
       h = { row = -1, col = -2 - opts.count },
@@ -162,16 +202,45 @@ local function float_buffer_cmd_and_map()
   map.quit_key()
 end
 
+local function float_win_focus_map()
+  local keymap = '<C-w>p'
+  store_keymap = vim.fn.maparg(keymap, 'n', false, true)
+
+  vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
+  vim.keymap.set('n', keymap, function()
+    local bufs = util.get_bufs(namespace .. '://')
+    local handle = 0
+
+    for _, v in ipairs(bufs) do
+      if v ~= vim.api.nvim_get_current_buf() then
+        handle = vim.fn.bufwinid(v)
+      end
+    end
+
+    if handle == -1 then
+      local key = vim.api.nvim_replace_termcodes('<C-w>p', true, false, true)
+      vim.api.nvim_feedkeys(key, 'n', false)
+    else
+      vim.api.nvim_set_current_win(handle)
+    end
+  end, { desc = 'Focus Mug float window' })
+end
+
+---@param bufnr number Float Buffer id
 ---@param addition function specified buffer unique maps
-local function float_buffer_post(addition)
-  float_buffer_cmd_and_map()
+local function float_win_post(bufnr, addition)
+  vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
+  float_win_cmd_and_map()
 
   if addition then
     addition()
   end
 end
 
-local function float_buffer_autocmd(bufnr, leavecmd)
+---@param bufnr number Floating-window buffer number
+---@param leavecmd function Executed when a floating-window is deleted
+---@param terminal? boolean If the buffer is a therminal
+local function float_win_autocmd(bufnr, leavecmd, terminal)
   local float_col = math.max(1, get_global('columns') - 30)
   local float_width = vim.api.nvim_win_get_width(0)
   local float_height = vim.api.nvim_win_get_height(0)
@@ -189,6 +258,10 @@ local function float_buffer_autocmd(bufnr, leavecmd)
         height = math.min(10, float_height),
         width = math.min(30, float_width),
       })
+
+      if terminal then
+        vim.api.nvim_win_set_cursor(0, { 10, 1 })
+      end
     end,
     desc = 'Move the float to the edge when out of focus',
   })
@@ -196,6 +269,10 @@ local function float_buffer_autocmd(bufnr, leavecmd)
     group = 'mug',
     buffer = bufnr,
     callback = function()
+      if terminal then
+        vim.api.nvim_command('startinsert')
+      end
+
       vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
       vim.api.nvim_win_set_config(
         0,
@@ -212,11 +289,15 @@ local function float_buffer_autocmd(bufnr, leavecmd)
       vim.api.nvim_del_autocmd(au_id_bufleave)
       vim.api.nvim_del_autocmd(au_id_bufenter)
 
-      local float_exist = util.get_bufs(NAMESPACE .. ':/')
+      local float_exist = util.get_bufs(namespace .. '://')
 
       if #float_exist == 1 then
-        pcall(vim.fn.mapset, 'n', false, store_keymap)
+        local err = pcall(vim.fn.mapset, 'n', false, store_keymap)
         store_keymap = nil
+
+        if not err then
+          vim.keymap.del('n', '<C-w>p')
+        end
       end
 
       if leavecmd then
@@ -227,8 +308,8 @@ local function float_buffer_autocmd(bufnr, leavecmd)
   })
 end
 
----@param bufnr number buffer id of windowflo
----@param opts table options of window
+---@param bufnr number Buffer id of windowflo
+---@param opts table Options of window
 ---@return table # {bufnr = buffer id, handle = buffer handle}
 local function create_float(bufnr, opts)
   local handle = vim.api.nvim_open_win(bufnr, true, opts)
@@ -238,7 +319,9 @@ local function create_float(bufnr, opts)
   return { bufnr = bufnr, handle = handle }
 end
 
----@param tbl table nvim_open_win options
+---@alias float_table table
+
+---@param tbl float_table nvim_open_win options
 ---@return table # { bufnr = buffer number, handle = buffer handle }
 M.open = function(tbl)
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.contents)
@@ -248,35 +331,46 @@ M.open = function(tbl)
   end
 
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
-  local keymap = '<C-w>p'
-  store_keymap = vim.fn.maparg(keymap, 'n', false, true)
 
-  vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
-  vim.keymap.set('n', keymap, function()
-    local bufs = util.get_bufs(NAMESPACE .. ':/')
-    local handle = 0
-
-    for _, v in ipairs(bufs) do
-      if v ~= vim.api.nvim_get_current_buf() then
-        handle = vim.fn.bufwinid(v)
-      end
-    end
-
-    if handle == -1 then
-      local key = vim.api.nvim_replace_termcodes('<C-w>p', true, false, true)
-      vim.api.nvim_feedkeys(key, 'n', false)
-    else
-      vim.api.nvim_set_current_win(handle)
-    end
-  end, { desc = 'Focus Mug float buffer' })
-
-  float_buffer_post(tbl.post)
-  float_buffer_autocmd(buf.bufnr, tbl.leave)
+  float_win_focus_map()
+  float_win_post(buf.bufnr, tbl.post)
+  float_win_autocmd(buf.bufnr, tbl.leave)
 
   return buf
 end
 
----@param tbl table nvim_open_win options
+---@param tbl float_table nvim_open_win options
+---@return table # { bufnr = buffer number, handle = buffer handle }
+M.term = function(tbl)
+  local cmd = tbl.cmd or ''
+  local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.cmd)
+  namespace = 'term'
+
+  if not win then
+    return { bufnr = nil, handle = nil }
+  end
+
+  local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
+  win = nil
+
+  if cmd ~= '' then
+    vim.fn.termopen(cmd, {
+      on_exit = function()
+        vim.api.nvim_command('quit')
+      end,
+    })
+  else
+    vim.api.nvim_command('terminal')
+  end
+
+  float_win_focus_map()
+  float_win_post(buf.bufnr, tbl.post)
+  float_win_autocmd(buf.bufnr, tbl.leave, true)
+
+  return buf
+end
+
+---@param tbl float_table nvim_open_win options
 ---@return table # { bufnr = buffer number, handle = buffer handle }
 M.input = function(tbl)
   local current_bufnr = vim.api.nvim_get_current_buf()
@@ -288,7 +382,7 @@ M.input = function(tbl)
 
   vim.api.nvim_win_set_option(0, 'winblend', 0)
   vim.api.nvim_win_set_hl_ns(0, ns_inputbar)
-  float_buffer_post(tbl.post)
+  float_win_post(input_bar.bufnr, tbl.post)
   map.input_keys()
   vim.api.nvim_command('startinsert!')
   vim.api.nvim_create_autocmd({ 'WinEnter' }, {
@@ -304,7 +398,7 @@ M.input = function(tbl)
   return input_bar
 end
 
----@param tbl table nvim_open_win options
+---@param tbl float_table nvim_open_win options
 ---@return table # { bufnr = buffer number, handle = buffer handle }
 M.input_nc = function(tbl)
   local win = Float:_new(tbl.title, 1, tbl.width, tbl.border, tbl.relative, tbl.anchor, 99, tbl.contents)
@@ -312,7 +406,7 @@ M.input_nc = function(tbl)
 
   vim.api.nvim_win_set_option(0, 'winblend', 0)
   map.input_keys()
-  float_buffer_post(tbl.post)
+  float_win_post(input_bar.bufnr, tbl.post)
   vim.api.nvim_command('startinsert!')
 
   return input_bar
