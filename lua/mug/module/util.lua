@@ -320,13 +320,15 @@ M.gitcmd = function(tbl)
 end
 
 ---Setup virtual buffer
----@param hidden string Behavior on budder close
 ---@param listed boolean Whether to put on the buffer list
-M.nofile = function(hidden, listed)
-  vim.api.nvim_buf_set_option(0, 'buftype', 'nofile')
+---@param hidden string Behavior on buffer close
+---@param type? string Specify buffer type
+M.nofile = function(listed, hidden, type)
+  type = type or 'nofile'
   vim.api.nvim_buf_set_option(0, 'swapfile', false)
-  vim.api.nvim_buf_set_option(0, 'bufhidden', hidden)
   vim.api.nvim_buf_set_option(0, 'buflisted', listed)
+  vim.api.nvim_buf_set_option(0, 'bufhidden', hidden)
+  vim.api.nvim_buf_set_option(0, 'buftype',type)
 end
 
 return M

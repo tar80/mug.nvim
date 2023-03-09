@@ -36,7 +36,7 @@ hl.link(0, 'MugIndexStage', 'Statement')
 hl.link(0, 'MugIndexUnstage', 'ErrorMsg')
 hl.link(0, 'MugIndexWarning', 'ErrorMsg')
 
-local function float_buffer_hl()
+local function float_win_hl()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
 
   if vim.fn.hlexists('MugIndexAdd') == 0 then
@@ -290,7 +290,7 @@ local function diff_close()
   end
 end
 
-local function float_buffer_map()
+local function float_win_map()
   map.buf_set(true, 'n', 'gd', function()
     if not package.loaded['mug.diff'] then
       util.notify('MugDiff not available', HEADER, 3)
@@ -378,13 +378,13 @@ local function float_buffer_map()
   end, 'Update the index of selected files')
 end
 
-local function float_buffer_post()
-  vim.bo.modifiable = false
-  float_buffer_hl()
-  float_buffer_map()
+local function float_win_post()
+  vim.api.nvim_buf_set_option(0, 'modifiable', false)
+  float_win_hl()
+  float_win_map()
 end
 
-local function float_buffer(list)
+local function float_win(list)
   local name = vim.b.mug_branch_name
   local stats = vim.b.mug_branch_stats
 
@@ -396,7 +396,7 @@ local function float_buffer(list)
     contents = function()
       return list
     end,
-    post = float_buffer_post,
+    post = float_win_post,
     leave = function()
       add_lines, force_lines, reset_lines = {}, {}, {}
       float_height, enable_ignored = 2, false
@@ -420,7 +420,7 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
     return
   end
 
-  float_buffer(list)
+  float_win(list)
 end, {
   nargs = 0,
   bang = true,

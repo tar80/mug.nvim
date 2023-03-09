@@ -243,7 +243,7 @@ local function mug_diffcached(vertical)
     end
 
     vim.api.nvim_command('silent ' .. pos.direction .. ' botright ' .. range .. 'new ' .. DIFFCACHED_URI)
-    util.nofile('hide', true)
+    util.nofile(true, 'hide')
     vim.api.nvim_command('setfiletype git|set foldcolumn=0 signcolumn=no number')
     vim.api.nvim_buf_set_lines(0, 0, -1, false, result)
 
@@ -307,7 +307,7 @@ end
 local function setup_commit_buffer(merged, notation)
   vim.api.nvim_set_var('no_gitcommit_commands', true)
   vim.api.nvim_buf_set_option(0, 'filetype', 'gitcommit')
-  util.nofile('hide', false)
+  util.nofile(false, 'hide')
   vim.opt_local.signcolumn = 'no'
   vim.opt_local.spell = true
   vim.opt_local.spellfile = TEMPLATE_DIR .. 'en.utf-8.add'

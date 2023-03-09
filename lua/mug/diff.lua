@@ -174,7 +174,7 @@ local function let_compare(name, ...)
     vim.api.nvim_command('silent ' .. options.pos .. 'new ' .. filename)
     local diffnr = vim.api.nvim_get_current_buf()
 
-    util.nofile('wipe', true)
+    util.nofile(true, 'wipe')
     vim.api.nvim_buf_set_lines(diffnr, 0, -1, false, stdout)
     vim.api.nvim_command('diffthis')
     vim.api.nvim_set_current_win(handle)
@@ -188,22 +188,21 @@ end
 ---Execute git cat-file against the current-buffer and compare differences
 ---@param name string Append to command name
 local mug_diff = function(name)
-  vim.api.nvim_create_user_command('MugDiff' .. name, function(v)
-    if #v.fargs > 3 then
+  vim.api.nvim_create_user_command('MugDiff' .. name, function(opts)
+    if #opts.fargs > 3 then
       util.notify('There are many arguments. All you need is [<position>] [<tree-ish>] [<filespec>]', HEADER, 3)
       return
     end
 
-    let_compare(name, unpack(v.fargs))
+    let_compare(name, unpack(opts.fargs))
   end, {
     nargs = '*',
     complete = function(a, l, _)
       local input = #vim.split(l, ' ', { plain = true })
 
-      if input == 2 then
-        return comp.filter(a, l, { 'top', 'bottom', 'left', 'right' })
-      elseif input == 3 then
-        return comp.filter(a, l, comp.branches())
+      if input > 1 then
+        return input == 2 and comp.filter(a, l, { 'top', 'bottom', 'left', 'right' })
+          or comp.filter(a, l, comp.branches())
       else
         return {}
       end
