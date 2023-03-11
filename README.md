@@ -64,7 +64,7 @@ MugFloat のフォーカスに割り当てられます。
 
 **variables**
 
-- float_winblend (上書き)  
+- float_winblend `integer`(上書き)  
   背景の疑似透過性を指定します。
 
 [float.webm](https://user-images.githubusercontent.com/45842304/218292617-887a15b2-39dd-41c3-8ca0-fc913868c0b5.webm)
@@ -105,8 +105,7 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
 
 **variables**
 
-- root_patterns (上書き)
-
+- root_patterns `table`(上書き)  
   記述フォーマットは vim-findroot の root marker patterns に倣います。優先度があり、先に記述されたパターンが優先されます。
   以下のようなディレクトリ構造を持つファイル file.vim を開いたときにカレントディレクトリは
   `root_patterns`の値により、表のように設定されます。
@@ -130,8 +129,7 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
   | .git/, .gitignore              | main/submodule        |
   | .gitignore                     | main/submodule/script |
 
-- ignore_filetypes (追加)
-
+- ignore_filetypes `table`(追加)  
   指定したファイルタイプは MugFindroot 自動実行の対象外となります。
   ファイルタイプに`*`(ワイルドカード)は指定できません。
 
@@ -153,8 +151,7 @@ require('mug').setup({
 
 **variables**
 
-- edit_command (上書き)
-
+- edit_command `string`(上書き)  
   コマンド`Edit`を別名で登録します。コマンドが不要であれば`""`空文字を指定します。
 
 </details>
@@ -175,8 +172,7 @@ require('mug').setup({
 
 **variables**
 
-- file_command (上書き)
-
+- file_command `string`(上書き)  
   コマンド`File`を別名で登録します。コマンドが不要であれば`""`空文字を指定します。
 
 </details>
@@ -197,8 +193,7 @@ require('mug').setup({
 
 **variables**
 
-- write_command (上書き)
-
+- write_command `string`(上書き)  
   コマンド`Write`を別名で登録します。コマンドが不要であれば`""`空文字を指定します。
 
 </details>
@@ -259,12 +254,10 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 
 **variables**
 
-- strftime (上書き)
-
+- strftime `string`(上書き)  
   `<F5>`で挿入する時刻の書式を指定します。
 
-- commit_notation (上書き)
-
+- commit_notation `string`(上書き)  
   コミットの形式を指定します。`conventional` `genaral` `none`が指定でき、
   指定した形式に合わせたコミットテンプレートと短縮入力が設定されます。  
   また、`mug/lua/template/`内に`<user-template>`と`<user-template>.lua`を作成し、
@@ -273,12 +266,10 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
   スクリプト内`M.additional_settings`に関数を設定すれば、キーマップやコマンドを追加することもできます。
   記述方法は他のテンプレートを参考にしてください。
 
-- commit_diffcached_height (上書き)
-
+- commit_diffcached_height `integer`(上書き)  
   `<F6>`で開く差分バッファの高さを指定します。
 
-- commit_gpg_sign (上書き)
-
+- commit_gpg_sign `string`(上書き)  
   署名に使用する鍵(gpg)を指定します。  
   指定しない場合はデフォルト(コミッター ID)になります。
 
@@ -342,16 +333,16 @@ MugConflict はロケーションリストにキーを設定します。
 
 **variables**
 
-- loclist_position (上書き)  
-  ロケーションリストの表示位置を指定します。
+- loclist_position `string`(上書き)  
+  ロケーションリストの表示位置を指定します。`top` `bottom` `lef` `right`を指定できます。
 
-- loclist_disable_number (上書き)  
+- loclist_disable_number `boolean`(上書き)  
   ロケーションリストの行番号を非表示にするなら`true`を指定します。
 
-- filewin_beacon (上書き)  
+- filewin_beacon `string`(上書き)  
   ハンクの開始位置(signcolumn)に表示される文字を指定します。
 
-- filewin_indicate_position (上書き)  
+- filewin_indicate_position `string`(上書き)  
   ファイルウインドウ連動時の、ハンクの画面上の位置です。  
   `upper` `center` `lower`から指定します。
 
@@ -406,8 +397,7 @@ require('mug').setup({
 
 **variables**
 
-- diff_position (上書き)
-
+- diff_position `string`(上書き)  
   `<position>`のデファルト値を`top` `bottom` `left` `right`のいずれかに設定できます。
 
 </details>
@@ -483,28 +473,22 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 
 **variables**
 
-- index_add_key (上書き)
-
+- index_add_key `string`(上書き)  
   行選択(Stage)に使用するキーを指定します。
 
-- index_force_key (上書き)
-
+- index_force_key `string`(上書き)  
   行選択(Force stage)に使用するキーを指定します。
 
-- index_reset_key (上書き)
-
+- index_reset_key `string`(上書き)  
   行選択(Reset)に使用するキーを指定します。
 
-- index_clear_key (上書き)
-
+- index_clear_key `string`(上書き)  
   選択状態をクリアするキーを指定します。
 
-- index_input_bar (上書き)
-
+- index_input_bar `string`(上書き)  
   コミット入力バーの呼び出しキーを指定します。
 
-- index_commit (上書き)
-
+- index_commit `string`(上書き)  
   `MugCommit`の実行キーを指定します。
 
 **highlights**
@@ -556,7 +540,7 @@ require('mug').setup({
 require('mug').setup({
   mkrepo = true,
   variables = {
-    remote_url = ,
+    remote_url = nil,
     commit_initial_message = 'Initial commit',
   }
 })
@@ -572,13 +556,11 @@ require('mug').setup({
 
 **variables**
 
-- remote_url (上書き)
-
+- remote_url `string`(上書き)  
   リモートブランチの URL。HTTPS または、SSH を指定します。  
   未設定の場合、上流ブランチの設定に失敗します。
 
-- commit_initial_message (上書き)
-
+- commit_initial_message `string`(上書き)  
   初期化コミットに使用されるメッセージを指定します。
 
 [mkrepo.webm](https://user-images.githubusercontent.com/45842304/219909055-10a63d23-597e-4008-a427-d67c226628c8.webm)
@@ -590,6 +572,8 @@ require('mug').setup({
 ```lua:
 require('mug').setup({
   show = true,
+  variables = {
+    show_command = 'MugShow',
   }
 })
 ```
@@ -613,7 +597,78 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
 | `:`          | コマンド       | `:version`                   |
 | `MugShow!`   | shell コマンド | `ls`, `git show`             |
 
+**variables**
+
+- show_command `string`(上書き)  
+  コマンド`MugShow`を別名で登録します。
+
 [show.webm](https://user-images.githubusercontent.com/45842304/222901228-1674129e-630b-40cc-b1b6-31964a560594.webm)
+
+</details>
+
+</details>
+<details>
+<summary>MugTerm</summary>
+
+```lua:
+require('mug').setup({
+  terminal = true,
+  variables = {
+    term_command = 'MugTerm',
+    term_height = 1,
+    term_width = 0.9,
+    term_shell = nil,
+    term_position = nil,
+    term_disable_columns = nil,
+    term_nvim_pseudo = nil,
+    term_nvim_opener = nil,
+    }
+  }
+})
+```
+
+**:[\<count>]MugTerm[!] [\<position>] [\<command>]**
+
+MugTerm は git とは関連のないコマンドです。バッファ、またはフローティングウィンドウで
+シェルを開きます。ターミナル内でエディタを必要とする git コマンドを実行したときに
+neovim をネストさせない機能があります。
+
+- `<count>`にはバッファのサイズを指定できます。横幅の最低値は`20`、高さの最低値は`3`が設定されています。
+- 引数`<position>`はターミナルを開く位置です。カレントバッファを起点に`top` `bottom` `left` `right` `float`を指定できます。
+  初期値は`top`です。`term_position`で初期値を変更できます。
+- 引数`<command>`はターミナルで実行するコマンドです。コマンド終了時にバッファは閉じられます。  
+  `tig` `lazygit`などのインターフェイスを持つコマンドを指定します。
+- `!`を付けると git commit などの実行時に、ターミナル内ではなくタブにバッファを開きます。
+  この機能は[lambdalisue/edita.vim](https://github.com/lambdalisue/edita.vim)をベースにしています。
+  edita.vim では環境変数`EDITOR`を書き換えますが、MugTerm では`GIT_EDITOR`を書き換えます。
+  variables`term_nvim_pseudo`を`true`に設定すると、`!`の有無に関わらず有効になります。
+
+**variables**
+
+- term_command `string`(上書き)  
+  コマンド`MugTerm`を別名で登録します。
+
+- term_height `float`(上書き)  
+  フローティングウィンドウの高さを比率で指定します。
+
+- term_width `float`(上書き)  
+  フローティングウィンドウの横幅を比率で指定します。
+
+- term_shell `string`(上書き)  
+  `<command>`を指定しなかったときに指定したシェルを実行します。初期値は`&shell`です。
+
+- term_position `integer`(上書き)  
+  MugTerm の初期位置を設定します。初期値は``(空文字)です。
+
+- term_disable_columns `boolean`(上書き)
+  行番号などを非表示にします。
+
+- term_nvim_pseudo `boolean`(上書き)  
+  git commit などエディタが必要な git コマンドの実行時に、常に実行元のインスタンスで
+  バッファを開くようになります。
+
+- term_nvim_opener `string`(上書き)  
+  `term_nvim_pseudo = ture`設定時にバッファを開く方法を指定します。初期値は`tabnew`です。
 
 </details>
 
@@ -629,6 +684,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
     merge = false,
     mkrepo = false,
     show = false,
+    terminal = false,
     variables = {
       -- Float
       float_winblend = 0,
@@ -659,7 +715,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
       loclist_disable_number = nil,
 
       -- Diff
-      diff_position,
+      diff_position = nil,
 
       -- Index
       index_add_key = 'a',
@@ -672,6 +728,16 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
       -- Mkrepo
       remote_url = nil,
       commit_initial_message = 'Initial commit',
+
+      -- Term
+      term_command = 'MugTerm',
+      term_height = 1, -- floating window
+      term_width = 0.9, -- floating window
+      term_shell = nil,
+      term_position = nil, -- normal window
+      term_disable_columns = nil,
+      term_nvim_pseudo = nil,
+      term_nvim_opener = nil,
     },
   })
 ```
@@ -689,6 +755,7 @@ mug.nvim は以下の vim-plugin のコードを内包します。
 - [mattn/vim-findroot](https://github.com/mattn/vim-findroot)
 - [kana/vim-g](https://github.com/kana/vim-g)
 - [ms-jpg/lua-async-await](https://github.com/ms-jpq/lua-async-await)
+- [lambdalisue/edita.vim](https://github.com/lambdalisue/edita.vim) **Deprecated**
 
 また以下のプロジェクトを参考にさせて頂きました。
 

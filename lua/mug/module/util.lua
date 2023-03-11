@@ -17,6 +17,7 @@
 ---@field isRepo function Returns whether the specified path is a repository or not
 ---@field gitcmd function Returns git command and options as a table
 ---@field nofile function Apply settings as virtual buffer to buffer
+---@filed termopen function Open terminal as buffer
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
 
@@ -334,7 +335,24 @@ M.nofile = function(listed, hidden, type)
   vim.api.nvim_buf_set_option(0, 'swapfile', false)
   vim.api.nvim_buf_set_option(0, 'buflisted', listed)
   vim.api.nvim_buf_set_option(0, 'bufhidden', hidden)
-  vim.api.nvim_buf_set_option(0, 'buftype',type)
+  vim.api.nvim_buf_set_option(0, 'buftype', type)
+end
+
+---@param cmd string Launch command on terminal buffer
+M.termopen = function(cmd)
+  if #cmd == 0 then
+    cmd = _G.Mug.term_shell or vim.api.nvim_get_option('shell')
+  end
+
+  local bufnr = vim.api.nvim_get_current_buf()
+
+  vim.fn.termopen(cmd, {
+    on_exit = function()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.api.nvim_command('bwipeout')
+      end
+    end,
+  })
 end
 
 return M

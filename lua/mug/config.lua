@@ -21,6 +21,10 @@ local function set_default(overwrite)
   if _G.Mug.show_command then
   _G.Mug[method]('show_command', 'MugShow', true)
   end
+
+  if _G.Mug.term_command then
+  _G.Mug[method]('term_command', 'MugTerm', true)
+  end
 end
 
 ---@alias userspec table Optional user settings
@@ -54,7 +58,12 @@ local function change_settings(opts)
     'index_inputbar',
     'index_commit',
     'show_command',
+    'term_command',
     'term_shell',
+    'term_disable_columns',
+    'term_position',
+    'term_nvim_opener',
+    'term_nvim_pseudo',
     'term_height',
     'term_width',
   }

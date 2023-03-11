@@ -2,106 +2,159 @@ local util = require('mug.module.util')
 local tbl = require('mug.module.table')
 local float = require('mug.module.float')
 local comp = require('mug.module.comp')
+local shell = require('mug.module.shell')
 
 ---@class term
+---@field open function
 local M = {}
 local HEADER, NAMESPACE = 'mug/term', 'MugTerm'
-local float_handle = 0
+local positions = util.tbl_merges(tbl.positions, { float = 'float' })
+local term_handle = 0
+local columns = { foldcolumn = vim.NIL, signcolumn = vim.NIL, number = vim.NIL, relativenumber = vim.NIL }
+local store_columns = vim.deepcopy(columns)
+local discolumns = {
+  foldcolumn = '0',
+  signcolumn = 'no',
+  number = false,
+  relativenumber = false,
+}
 
 ---@class Mug
----@filed term_shell string
+---@filed term_shell string Specifies the shell to use with MugTerm
+---@field term_position string Specifies the position of the buffer
+---@filed term_disable_columns All columns are disabled
+---@filed term_nvim_pseudo boolean Do not start new nvim instance on MugTermterm
+---@filed term_nvim_opener string Specifies the position when opening a buffer from MugTerm
 ---@field term_height number
 ---@field term_width number
 _G.Mug._def('term_height', 1, true)
 _G.Mug._def('term_width', 0.9, true)
 
-local function launch_shell(callback)
-  if not _G.Mug.term_shell then
-    return callback()
+---@param display boolean Has columns
+---@param set? boolean Initialize table(columns)
+local function display_columns(display, set)
+  if not _G.Mug.term_disable_columns then
+    return
   end
 
-  local shell = vim.api.nvim_get_option('shell')
-  vim.api.nvim_set_option('shell', _G.Mug.term_shell)
-  local handle = callback()
-  vim.api.nvim_set_option('shell', shell)
+  local t = display and store_columns or discolumns
+  local wo = vim.wo
+
+  for k, v in pairs(t) do
+    if set then
+      store_columns[k] = wo[k]
+    elseif v ~= wo[k] then
+      wo[k] = v
+    end
+  end
+end
+
+---@param bufnr number Terminal-bufffer number
+local function on_attach(bufnr)
+  local term_id_bufenter = vim.api.nvim_create_autocmd({ 'BufEnter' }, {
+    group = 'mug',
+    buffer = bufnr,
+    callback = function()
+      vim.api.nvim_command('startinsert')
+    end,
+    desc = 'Each time you enter the buffer, you start in insert-mode',
+  })
+  local term_id_bufreadpre = vim.api.nvim_create_autocmd({ 'BufWinEnter' }, {
+    group = 'mug',
+    callback = function()
+      display_columns(true)
+    end,
+    desc = 'Adjust columns',
+  })
+  vim.api.nvim_create_autocmd({ 'BufWipeout' }, {
+    group = 'mug',
+    once = true,
+    buffer = bufnr,
+    callback = function()
+      display_columns(true)
+      vim.api.nvim_del_autocmd(term_id_bufenter)
+      vim.api.nvim_del_autocmd(term_id_bufreadpre)
+      term_handle = 0
+      store_columns = vim.deepcopy(columns)
+    end,
+    desc = 'Remove autocmd set in MugTerm',
+  })
+end
+
+local function create_window(count, pos)
+  if count == 0 then
+    count = ''
+  else
+    count = (pos == 'top' or pos == 'bottom') and math.max(3, count) or math.max(20, count)
+  end
+
+  vim.api.nvim_command('silent ' .. pos .. count .. 'new')
+end
+
+local function term_buffer(pos, count, cmd)
+  local bufnr, handle
+  cmd = table.concat(cmd, ' ')
+
+  if pos == 'float' then
+    handle = float.term({
+      cmd = cmd,
+      title = NAMESPACE,
+      height = _G.Mug.term_height,
+      width = _G.Mug.term_width,
+      border = 'rounded',
+    }).handle
+  else
+    create_window(count, pos)
+    util.termopen(cmd)
+    util.nofile(true, 'wipe', 'terminal')
+    display_columns(false)
+
+    bufnr = vim.api.nvim_get_current_buf()
+    handle = vim.api.nvim_get_current_win()
+
+    on_attach(bufnr)
+  end
+
+  vim.api.nvim_buf_set_option(0, 'filetype', 'terminal')
+  vim.api.nvim_command('clearjumps|startinsert')
 
   return handle
 end
 
-local function create_term(pos, range, cmd)
-  local bufnr
-  range = range == 0 and '' or range
-  cmd = table.concat(cmd, ' ')
-
-  if pos == 'float' then
-    local floatnr = launch_shell(function()
-      return float.term({
-        cmd = cmd,
-        title = NAMESPACE,
-        height = _G.Mug.term_height,
-        width = _G.Mug.term_width,
-        border = 'rounded',
-      })
-    end)
-    bufnr, float_handle = floatnr.bufnr, floatnr.handle
-  else
-    bufnr = launch_shell(function()
-      vim.api.nvim_command('silent ' .. pos .. range .. 'new')
-
-      if cmd ~= '' then
-        vim.fn.termopen(cmd, {
-          on_exit = function()
-            vim.api.nvim_command('quit')
-          end,
-        })
-      else
-        vim.api.nvim_command('terminal')
-      end
-
-      util.nofile(true, 'wipe', 'terminal')
-      vim.api.nvim_command('set foldcolumn=0 signcolumn=no nonumber norelativenumber')
-
-      return vim.api.nvim_get_current_buf()
-    end)
-  end
-
-  vim.api.nvim_buf_set_option(0, 'filetype', 'terminal')
-  vim.api.nvim_command('startinsert')
-
-  return bufnr
-end
-
-local function get_args(...)
-  local args = ...
-  local pos = tbl.positions[args[1]]
+local function get_args(fargs)
+  local pos = positions[fargs[1]]
 
   if not pos then
-    pos = args[1] == 'float' and 'float' or ''
+    pos = positions[_G.Mug.term_position] or ''
+  else
+    table.remove(fargs, 1)
   end
 
-  table.remove(args, 1)
-
-  return pos, args
+  return pos, fargs
 end
 
-M.open = function(range, ...)
-  local pos, cmd = get_args(...)
-  local servername = vim.api.nvim_get_vvar('servername')
-  local bufnr = create_term(pos, range, cmd)
-
-  vim.api.nvim_buf_set_var(bufnr, 'mug_main_server', servername)
-end
-
-vim.api.nvim_create_user_command(NAMESPACE, function(opts)
-  if float.focus(float_handle) then
+M.open = function(count, bang, fargs)
+  if float.focus(term_handle) then
     return
   end
 
-  M.open(opts.range, opts.fargs)
-  -- if opts.bang then end
+  local pos, cmd = get_args(fargs)
+  local servername = vim.api.nvim_get_vvar('servername')
+
+  if bang or _G.Mug.term_nvim_pseudo then
+    shell.set_env('NVIM_LISSTEN_ADRESS', servername)
+    shell.nvim_client()
+  end
+
+  display_columns(true, true)
+  term_handle = term_buffer(pos, count, cmd)
+end
+
+vim.api.nvim_create_user_command(_G.Mug.term_command, function(opts)
+  M.open(opts.count, opts.bang, opts.fargs)
 end, {
   nargs = '*',
-  -- bang = true,
+  bang = true,
   count = true,
   complete = function(a, l, _)
     local input = #vim.split(l, ' ', { plain = true })

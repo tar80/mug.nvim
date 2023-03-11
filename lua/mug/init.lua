@@ -81,8 +81,8 @@ function mug.setup(options)
     'files',
     'index',
     'merge',
-    'show',
     'mkrepo',
+    'show',
     'terminal',
   }
 
@@ -93,6 +93,11 @@ function mug.setup(options)
   if options.show then
     _G.Mug._def('show_command', 'MugShow', true)
   end
+
+  if options.terminal then
+    _G.Mug._def('term_command', 'MugTerm', true)
+  end
+
   require('mug.config').set_options(options.variables)
 
   for _, v in ipairs(plugins) do

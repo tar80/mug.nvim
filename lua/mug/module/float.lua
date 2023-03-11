@@ -353,16 +353,7 @@ M.term = function(tbl)
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
   win = nil
 
-  if cmd ~= '' then
-    vim.fn.termopen(cmd, {
-      on_exit = function()
-        vim.api.nvim_command('quit')
-      end,
-    })
-  else
-    vim.api.nvim_command('terminal')
-  end
-
+  util.termopen(cmd, true)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave, true)
