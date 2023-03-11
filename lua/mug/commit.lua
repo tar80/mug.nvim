@@ -404,7 +404,7 @@ local function fixup_buffer_attach()
 
   vim.keymap.set('n', '<CR>', function()
     local hash = vim.api.nvim_get_current_line():sub(1, 7)
-    vim.cmd('bwipeout|stopinsert!')
+    vim.api.nvim_command('bwipeout|stopinsert!')
 
     local log = vim.fn.systemlist({ 'git', 'commit', '--fixup', hash })
 

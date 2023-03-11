@@ -1,4 +1,5 @@
 ---@class util
+---@field conv_slash function Change backslash to slash
 ---@field slash function Returns currently path separator
 ---@field normalize function Normalize path using crrently path separator
 ---@field pwd function Returns current working directory
@@ -18,6 +19,11 @@
 ---@field nofile function Apply settings as virtual buffer to buffer
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
+
+---@param item string
+M.conv_slash = function(item)
+  return item:gsub('\\', '/')
+end
 
 ---@return string # `slash` or `backslash`
 M.slash = function()

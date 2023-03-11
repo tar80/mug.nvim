@@ -90,6 +90,9 @@ function mug.setup(options)
   _G.Mug._def('file_command', 'File', true)
   _G.Mug._def('write_command', 'Write', true)
 
+  if options.show then
+    _G.Mug._def('show_command', 'MugShow', true)
+  end
   require('mug.config').set_options(options.variables)
 
   for _, v in ipairs(plugins) do

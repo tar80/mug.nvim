@@ -17,6 +17,10 @@ local function set_default(overwrite)
   _G.Mug[method]('edit_command', 'Edit', true)
   _G.Mug[method]('file_command', 'File', true)
   _G.Mug[method]('write_command', 'Write', true)
+
+  if _G.Mug.show_command then
+  _G.Mug[method]('show_command', 'MugShow', true)
+  end
 end
 
 ---@alias userspec table Optional user settings
@@ -49,6 +53,7 @@ local function change_settings(opts)
     'index_clear_key',
     'index_inputbar',
     'index_commit',
+    'show_command',
     'term_shell',
     'term_height',
     'term_width',

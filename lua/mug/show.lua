@@ -156,7 +156,7 @@ local function get_value(opts)
   return vim.trim(output):gsub('\n', ',')
 end
 
-vim.api.nvim_create_user_command(NAMESPACE, function(opts)
+vim.api.nvim_create_user_command(_G.Mug.show_command, function(opts)
   if float.focus(float_handle) then
     return
   end
