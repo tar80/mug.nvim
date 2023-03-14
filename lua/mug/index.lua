@@ -46,8 +46,8 @@ local function float_win_hl()
   end
 
   vim.api.nvim_command([[syn match MugIndexHeader "^##\s.\+$" display oneline]])
-  vim.api.nvim_command([[syn match MugIndexUnstage "[MADRC]\s" display]])
-  vim.api.nvim_command([[syn match MugIndexStage "^[MADRC]" display]])
+  vim.api.nvim_command([[syn match MugIndexUnstage "^\s.[MADRC]\s" display]])
+  vim.api.nvim_command([[syn match MugIndexStage "^\s[MADRC]" display]])
   vim.api.nvim_command([[syn match MugIndexUnstage "^[?!U]\{2}" display]])
 end
 
@@ -138,7 +138,7 @@ local function do_stage(height)
   end
 
   if not vim.tbl_isempty(error_msg) then
-    virtual_warning(error_msg, height)
+    virtual_warning(error_msg, vim.api.nvim_win_get_height(0))
   end
 
   return skip ~= 3 and true
@@ -420,7 +420,12 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
     return
   end
 
-  float_win(list)
+  if #stdout == 2 and stdout[2]:match('^%s+$') then
+    util.notify('Index is clean', HEADER, 2)
+    return
+  end
+
+  float_win(stdout)
 end, {
   nargs = 0,
   bang = true,

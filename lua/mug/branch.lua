@@ -97,11 +97,11 @@ end
 ---@param root string Project root path
 ---@param chain boolean Child process of a branch_name()
 ---@param ignore? boolean Add option "--ignored"
----@return table # { s = staged count, u = unstaged count, c = conflicted count }
+---@return table|nil # { s = staged count, u = unstaged count, c = conflicted count }
 ---@return table # Git status stdout
 local function get_branch_stats(root, chain, ignore)
-  if not chain and (vim.fn.isdirectory(root) == 0 or vim.b.mug_branch_name == nil) then
-    return {}, {}
+  if not chain and vim.fn.isdirectory(root) == 0 then
+    return nil, {}
   end
 
   local ignored = ignore and '--ignored' or ''
@@ -110,6 +110,10 @@ local function get_branch_stats(root, chain, ignore)
   local stdout = util.get_stdout(table.concat(cmdline, ' '))
   local list = vim.split(stdout, '\n')
   stdout = nil
+
+  if list[1]:find('^fatal:') then
+    return nil, {}
+  end
 
   local staged, unstaged, conflicted = 0, 0, 0
 
@@ -173,10 +177,9 @@ M.branch_stats = function(root, response, ignore)
     return response and util.notify(msg, HEADER, 3) or { msg }
   end
 
-  local result, list = get_branch_stats(root, false, ignore)
-  -- vim.b.mug_branch_stats = result
-  vim.api.nvim_buf_set_var(0, 'mug_branch_stats', result)
-  branch_cache[root].stats = result
+  local stats, list = get_branch_stats(root, false, ignore)
+  vim.b.mug_branch_stats = stats
+  branch_cache[root].stats = stats
 
   return response and util.notify('Update index information', HEADER, 2) or list
 end

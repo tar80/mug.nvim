@@ -89,8 +89,8 @@ end
 ---@return string # Adjusted comparison file path
 ---@return boolean # The comparison target is the same file
 local function adjust_path(path)
-  local cwd = vim.loop.cwd():gsub('\\', '/')
-  local current_file = vim.fn.expand('%'):gsub('\\', '/')
+  local cwd =  util.pwd()
+  local current_file = util.filepath('/')
   local pathspec = vim.loop.fs_realpath(vim.fn.expand(path)):gsub('\\', '/')
   pathspec = pathspec:find(cwd, 1, true) and pathspec:sub(#cwd + 2) or pathspec
   local is_same = pathspec == current_file

@@ -94,7 +94,7 @@ local function max_range()
 end
 
 local function buf_close(bufnr, title, reason)
-  vim.api.nvim_command('close ' .. bufnr)
+  vim.api.nvim_command('bwipeout ' .. bufnr)
   vim.notify('[' .. title .. '] ' .. reason)
 end
 
