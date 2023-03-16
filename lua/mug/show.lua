@@ -1,5 +1,6 @@
 local float = require('mug.module.float')
 local notify = require('mug.module.util').notify
+local user_command = require('mug.module.util').user_command
 
 local HEADER, NAMESPACE = 'mug/show', 'MugShow'
 local float_handle = 0
@@ -156,7 +157,7 @@ local function get_value(opts)
   return vim.trim(output):gsub('\n', ',')
 end
 
-vim.api.nvim_create_user_command(_G.Mug.show_command, function(opts)
+user_command('show_command', function(opts)
   if float.focus(float_handle) then
     return
   end

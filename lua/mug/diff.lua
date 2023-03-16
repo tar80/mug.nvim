@@ -101,7 +101,7 @@ end
 ---@param name string Diff command name
 ---@param ... string Diff command arguments
 local function let_compare(name, ...)
-  if not util.belongtoRepo(HEADER) then
+  if not util.has_repo(HEADER) then
     return
   end
 

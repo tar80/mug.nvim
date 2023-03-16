@@ -13,17 +13,19 @@
 ---@field file_exist function Check for file existence
 ---@field get_stdout function Get shell command stdout
 ---@field get_bufs function Extract specified element from all buffers
----@field belongtoRepo function Returns whether the file being edited belongs to the repository or not
----@field isRepo function Returns whether the specified path is a repository or not
+---@field has_repo function Returns whether the current file to the repository or not
+---@field is_repo function Returns whether the specified path is a repository or not
 ---@field gitcmd function Returns git command and options as a table
 ---@field nofile function Apply settings as virtual buffer to buffer
----@filed termopen function Open terminal as buffer
+---@field user_command function Register after adjusting the command name
+---@field termopen function Open terminal as buffer
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
 
----@param item string
+---@param item string String to convert
+---@return string
 M.conv_slash = function(item)
-  return item:gsub('\\', '/')
+  return (item:gsub('\\', '/'))
 end
 
 ---@return string # `slash` or `backslash`
@@ -51,20 +53,13 @@ M.normalize = function(path, sep)
   return path:gsub(target_chr[sep], sep)
 end
 
----@param base? string? Specifying `parent` returns the parent directory is normalized
 ---@return string # working directory path separated by slashes
-M.pwd = function(base)
-  if base ~= 'parent' then
-    local current_dir = vim.loop.cwd():gsub('\\', '/')
-    return current_dir
-  end
-
-  local parent_dir = vim.fs.dirname(vim.api.nvim_buf_get_name(0))
-  return parent_dir ~= '.' and parent_dir or vim.loop.cwd():gsub('\\', '/')
+M.pwd = function()
+  return vim.loop.cwd():gsub('\\', '/')
 end
 
----@param sep string? Normalize the filepath
----@return string # Fullpath of being edited file
+---@param sep string? Path separator
+---@return string # Fullpath of current file
 M.filepath = function(sep)
   local path = vim.api.nvim_buf_get_name(0)
 
@@ -76,8 +71,8 @@ M.filepath = function(sep)
   return sep and M.normalize(path, sep) or path
 end
 
----@param sep string? Normalize the filepath
----@return string # Parent directory of current filepath
+---@param sep string? Path separator
+---@return string # Parent directory path of current file
 M.dirpath = function(sep)
   local path = vim.api.nvim_buf_get_name(0)
   path = path == '' and vim.loop.cwd() or path:gsub('^(.+)[/\\].*$', '%1')
@@ -292,7 +287,7 @@ end
 ---@param header string Notification-header
 ---@return boolean # In git-repository
 ---@return string # Git-repository root path
-M.belongtoRepo = function(header)
+M.has_repo = function(header)
   local path = vim.fs.find('.git', { type = 'directory', upward = true })[1]
 
   if not path then
@@ -305,7 +300,7 @@ end
 
 ---@param header string Notification-header
 ---@return boolean # Is it a git-repository
-M.isRepo = function(header)
+M.is_repo = function(header)
   if vim.fn.isdirectory(vim.loop.cwd() .. M.slash() .. '.git') == 0 then
     M.notify('Current direcotry does not point to git-root', header, 3)
     return false
@@ -336,6 +331,21 @@ M.nofile = function(listed, hidden, type)
   vim.api.nvim_buf_set_option(0, 'buflisted', listed)
   vim.api.nvim_buf_set_option(0, 'bufhidden', hidden)
   vim.api.nvim_buf_set_option(0, 'buftype', type)
+end
+
+---@param name string User command name
+---@param command function User command contents
+---@param options table User command options
+M.user_command = function(name, command, options)
+  if _G.Mug[name] then
+    if vim.fn.exists(':' .. _G.Mug[name]) ~= 2 then
+      vim.api.nvim_create_user_command(_G.Mug[name], function(opts)
+        command(opts)
+      end, options)
+
+      _G.Mug._ow(name, nil)
+    end
+  end
 end
 
 ---@param cmd string Launch command on terminal buffer

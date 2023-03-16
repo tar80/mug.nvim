@@ -1,4 +1,8 @@
-local mug = {}
+local util = require('mug.module.util')
+local job = require('mug.module.job')
+local comp = require('mug.module.comp')
+local hl = require('mug.module.highlight')
+local tbl = require('mug.module.table')
 
 ---@class Mug
 ---@field root string Mug.nvim own installation directory path
@@ -9,10 +13,8 @@ local mug = {}
 ---@field file_command string Name the File command
 ---@field write_command string Name the Write command
 require('mug.module.protect')
-local util = require('mug.module.util')
-local job = require('mug.module.job')
-local comp = require('mug.module.comp')
 
+local M = {}
 local HEADER = 'mug'
 local FINDROOT_DISABLED = 'mug_findroot_disable'
 
@@ -27,8 +29,8 @@ do
   end
 end
 
----Run "git add" on the file being edited
----@param force boolean Force stage the file being edited
+---Run "git add" on current file
+---@param force boolean Force stageing
 local function git_add(force)
   vim.api.nvim_command('silent update')
 
@@ -38,7 +40,7 @@ local function git_add(force)
   end
 
   if force then
-    local ok = util.interactive('Force stage to file being edited?', HEADER, 'y')
+    local ok = util.interactive('Force stage to current file?', HEADER, 'y')
 
     if not ok then
       return
@@ -60,32 +62,7 @@ local function git_add(force)
   end)
 end
 
-local function set_user_command(name, command, options)
-  if _G.Mug[name] then
-    if vim.fn.exists(':' .. _G.Mug[name]) ~= 2 then
-      vim.api.nvim_create_user_command(_G.Mug[name], function(opts)
-        command(opts)
-      end, options)
-    end
-
-    _G.Mug._ow(name, nil)
-  end
-end
-
----@param options table Overwrite plugin general settings
-function mug.setup(options)
-  local plugins = {
-    'commit',
-    'conflict',
-    'diff',
-    'files',
-    'index',
-    'merge',
-    'mkrepo',
-    'show',
-    'terminal',
-  }
-
+local function mug_variables(options)
   _G.Mug._def('edit_command', 'Edit', true)
   _G.Mug._def('file_command', 'File', true)
   _G.Mug._def('write_command', 'Write', true)
@@ -100,21 +77,23 @@ function mug.setup(options)
 
   require('mug.config').set_options(options.variables)
 
-  for _, v in ipairs(plugins) do
+  for _, v in ipairs(tbl.plugins) do
     if options[v] then
       require('mug.' .. v)
     end
   end
+end
 
+local function mug_commands()
   ---":Write"
   ---Update and "git add" the file being edited
-  set_user_command('write_command', function(opts)
+  util.user_command('write_command', function(opts)
     git_add(opts.bang)
   end, { bang = true })
 
   ---":Edit [<filename>]"
   ---Edit a file based on the parent directory
-  set_user_command('edit_command', function(opts)
+  util.user_command('edit_command', function(opts)
     local bang = opts.bang and '! ' or ' '
     local slash = util.slash()
     local parent = util.dirpath()
@@ -125,14 +104,14 @@ function mug.setup(options)
     nargs = '?',
     bang = 1,
     complete = function(a, l, _)
-      local parent = util.pwd('parent')
+      local parent = util.dirpath('/')
       return comp.filter(a, l, comp.files(parent))
     end,
   })
 
   ---":File <filename>"
   ---Rename edited file based on the parent directory
-  set_user_command('file_command', function(opts)
+  util.user_command('file_command', function(opts)
     local bang = opts.bang and '! ' or ' '
     local slash = util.slash()
     local parent = util.dirpath()
@@ -145,46 +124,28 @@ function mug.setup(options)
   })
 end
 
-function mug.reload()
-  local modules = {
-    'mug',
-    'mug.module.comp',
-    'mug.module.extmark',
-    'mug.module.float',
-    'mug.module.highlight',
-    'mug.module.job',
-    'mug.module.map',
-    'mug.module.timer',
-    'mug.module.util',
-    'mug.branch',
-    'mug.commit',
-    'mug.config',
-    'mug.conflict',
-    'mug.diff',
-    'mug.files',
-    'mug.merge',
-    'mug.show',
-    'mug.mkrepo',
-    'mug.index',
-    'mug.terminal',
-    'mug.workspace',
-  }
+local function mug_highlights(options)
+  local items = options.highlights or nil
 
-  for _, v in ipairs(modules) do
-    if package.loaded[v] then
-      package.loaded[v] = nil
-      require(v)
-    end
-  end
-
-  util.notify('Reload modules.', HEADER, 3)
+  hl.customize(items)
+  hl.lazy_load(hl.init)
 end
 
 ---Autogroup "mug"
 vim.api.nvim_create_augroup('mug', {})
 local set_ws_root = require('mug.workspace').set_workspace_root
 
----Execute "findroot" triggered by autocmd-event
+---Setup highlights
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = 'mug',
+  pattern = '*',
+  callback = function()
+    hl.init()
+  end,
+  desc = 'Setup mug highlights',
+})
+
+---Run "findroot"
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = 'mug',
   callback = function()
@@ -229,4 +190,24 @@ end, {
   end,
 })
 
-return mug
+---@param options table Overwrite plugin general settings
+function M.setup(options)
+  mug_variables(options)
+  mug_commands()
+  mug_highlights(options)
+
+  -- vim.g.loaded_mug = true
+end
+
+function M.reload()
+  for _, v in ipairs(tbl.modules) do
+    if package.loaded[v] then
+      package.loaded[v] = nil
+      require(v)
+    end
+  end
+
+  util.notify('Reload modules.', HEADER, 3)
+end
+
+return M

@@ -30,10 +30,10 @@ _G.Mug._def('strftime', '%c', true)
 _G.Mug._def('commit_notation', 'none', true)
 _G.Mug._def('commit_diffcached_height', 20, true)
 
-hl.link(0, 'MugLogHash', 'Special')
-hl.link(0, 'MugLogDate', 'Statement')
-hl.link(0, 'MugLogOwner', 'Conditional')
-hl.link(0, 'MugLogHead', 'Keyword')
+hl.store('MugLogHash', { link = 'Special' })
+hl.store('MugLogDate', { link = 'Statement' })
+hl.store('MugLogOwner', { link = 'Conditional' })
+hl.store('MugLogHead', { link = 'Keyword' })
 
 ---Setup commit-edit own abbreviations
 ---@param notation string Prefix notation format
@@ -129,7 +129,7 @@ local function create_commit(optspec, msgspec, commitmsg)
   local root = util.pwd()
   local editmsg = root .. '/.git/COMMIT_EDITMSG'
 
-  if not util.isRepo(HEADER) then
+  if not util.is_repo(HEADER) then
     return
   end
 
@@ -430,7 +430,7 @@ local function mug_commit(name)
       return
     end
 
-    if not util.isRepo(HEADER) then
+    if not util.is_repo(HEADER) then
       return
     end
 

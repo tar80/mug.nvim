@@ -28,17 +28,33 @@ _G.Mug._def('conflict_anc', '^||||||| ', true)
 _G.Mug._def('conflict_sep', '^=======$', true)
 _G.Mug._def('conflict_end', '^>>>>>>> ', true)
 
-vim.api.nvim_set_hl(ns, 'MugConflictHeader', { fg = '#777777', bg = '#000000' })
-vim.api.nvim_set_hl(ns, 'MugConflictBoth', { bg = hl.shade('Normal', 20, 15, 0) })
-hl.link(ns, 'MugConflictBase', 'DiffDelete')
-hl.link(ns, 'MugConflictOurs', 'DiffChange')
-hl.link(ns, 'MugConflictTheirs', 'DiffAdd')
-hl.link(ns, 'MugConflictBeacon', 'Search')
-hl.link(ns, 'ConflictMarkerBegin', 'MugConflictHeader')
-hl.link(ns, 'ConflictMarkerCommonAncestors', 'MugConflictHeader')
-hl.link(ns, 'ConflictMarkerCommonAncestorsHunk', 'MugConflictHeader')
-hl.link(ns, 'ConflictMarkerSeparator', 'MugConflictHeader')
-hl.link(ns, 'ConflictMarkerEnd', 'MugConflictHeader')
+vim.api.nvim_create_autocmd('ColorScheme', {
+  group = 'mug',
+  pattern = '*',
+  once = true,
+  callback = function()
+    hl.set('MugConflictBoth', { bg = hl.shade('Normal', 20, 15, 0) }, true)
+  end,
+  desc = 'Setup mug highlights',
+})
+
+-- local function check_conflic_marker()
+--   if vim.g.loaded_conflict_marker ~= 1 then
+--     return
+--   end
+
+--   hl.set('ConflictMarkerBegin', { link = 'MugConflictHeader' }, true)
+--   hl.set('ConflictMarkerCommonAncestors', { link = 'MugConflictHeader' }, true)
+--   hl.set('ConflictMarkerCommonAncestorsHunk', { link = 'MugConflictHeader' }, true)
+--   hl.set('ConflictMarkerSeparator', { link = 'MugConflictHeader' }, true)
+--   hl.set('ConflictMarkerEnd', { link = 'MugConflictHeader' }, true)
+-- end
+
+hl.store('MugConflictHeader', { fg = '#777777', bg = '#000000' })
+hl.store('MugConflictBase', { link = 'DiffDelete' })
+hl.store('MugConflictOurs', { link = 'DiffChange' })
+hl.store('MugConflictTheirs', { link = 'DiffAdd' })
+hl.store('MugConflictBeacon', { link = 'Search' })
 
 local function get_conflict_files()
   return vim.fn.systemlist(
@@ -604,7 +620,7 @@ local function close_loclist()
 end
 
 vim.api.nvim_create_user_command(NAMESPACE, function(opts)
-  if not util.belongtoRepo(HEADER) then
+  if not util.has_repo(HEADER) then
     return
   end
 

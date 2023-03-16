@@ -9,21 +9,21 @@ local HEADER = 'mug/config'
 ---Mug default settings
 ---@param overwrite? boolean
 local function set_default(overwrite)
-  local method = overwrite and '_ow' or '_def'
+  local method = overwrite and _G.Mug._ow or _G.Mug._def
 
-  _G.Mug[method]('root_patterns', { '.git/', '.gitignore' })
-  _G.Mug[method]('ignore_filetypes', { 'git', 'gitcommit', 'gitrebase' })
-  _G.Mug[method]('loglevel', 0)
-  _G.Mug[method]('edit_command', 'Edit', true)
-  _G.Mug[method]('file_command', 'File', true)
-  _G.Mug[method]('write_command', 'Write', true)
+  method('root_patterns', { '.git/', '.gitignore' })
+  method('ignore_filetypes', { 'git', 'gitcommit', 'gitrebase' })
+  method('loglevel', 0)
+  method('edit_command', 'Edit', true)
+  method('file_command', 'File', true)
+  method('write_command', 'Write', true)
 
   if _G.Mug.show_command then
-  _G.Mug[method]('show_command', 'MugShow', true)
+    method('show_command', 'MugShow', true)
   end
 
   if _G.Mug.term_command then
-  _G.Mug[method]('term_command', 'MugTerm', true)
+    method('term_command', 'MugTerm', true)
   end
 end
 
@@ -97,7 +97,7 @@ function M.set_options(opts)
   change_settings(opts)
 end
 
-M.init = function ()
+M.init = function()
   set_default(true)
 end
 

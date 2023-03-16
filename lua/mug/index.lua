@@ -31,20 +31,19 @@ _G.Mug._def('index_clear_key', 'c', true)
 _G.Mug._def('index_inputbar', '@', true)
 _G.Mug._def('index_commit', '`', true)
 
-hl.link(0, 'MugIndexHeader', 'String')
-hl.link(0, 'MugIndexStage', 'Statement')
-hl.link(0, 'MugIndexUnstage', 'ErrorMsg')
-hl.link(0, 'MugIndexWarning', 'ErrorMsg')
-
-local function float_win_hl()
+hl.lazy_load(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
 
-  if vim.fn.hlexists('MugIndexAdd') == 0 then
-    vim.api.nvim_set_hl(0, 'MugIndexAdd', { bg = hl.shade(hlname, 0, 10, 5) })
-    vim.api.nvim_set_hl(0, 'MugIndexForce', { bg = hl.shade(hlname, 0, 5, 30) })
-    vim.api.nvim_set_hl(0, 'MugIndexReset', { bg = hl.shade(hlname, 20, 0, 5) })
-  end
+  hl.set('MugIndexAdd', { bg = hl.shade(hlname, 0, 10, 5) }, true)
+  hl.set('MugIndexForce', { bg = hl.shade(hlname, 0, 5, 30) }, true)
+  hl.set('MugIndexReset', { bg = hl.shade(hlname, 20, 0, 5) }, true)
+end)
 
+hl.store('MugIndexHeader', { link = 'String' })
+hl.store('MugIndexStage', { link = 'Statement' })
+hl.store('MugIndexUnstage', { link = 'ErrorMsg' })
+
+local function float_win_hl()
   vim.api.nvim_command([[syn match MugIndexHeader "^##\s.\+$" display oneline]])
   vim.api.nvim_command([[syn match MugIndexUnstage "^\s.[MADRC]\s" display]])
   vim.api.nvim_command([[syn match MugIndexStage "^\s[MADRC]" display]])

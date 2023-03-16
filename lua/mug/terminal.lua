@@ -150,7 +150,7 @@ M.open = function(count, bang, fargs)
   term_handle = term_buffer(pos, count, cmd)
 end
 
-vim.api.nvim_create_user_command(_G.Mug.term_command, function(opts)
+util.user_command('term_command', function(opts)
   M.open(opts.count, opts.bang, opts.fargs)
 end, {
   nargs = '*',

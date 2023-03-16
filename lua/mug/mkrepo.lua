@@ -77,7 +77,7 @@ local function do_mkrepo(root, compared, contain)
 end
 
 vim.api.nvim_create_user_command('MugMkrepo', function(opts)
-  local root = util.pwd('parent')
+  local root = util.dirpath('/')
   local repo_root = root
   local pathspec = util.normalize(opts.args, '/'):gsub('/$', '')
 

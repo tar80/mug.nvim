@@ -29,7 +29,7 @@ end
 ---@return string? # Result of comparing parent directories
 ---@return string? # Parent directory path
 local get_parent_directory = function()
-  local path = util.pwd('parent')
+  local path = util.dirpath('/')
   local status = compare_wd(path)
   local buftype = vim.api.nvim_buf_get_option(0, 'buftype')
 
