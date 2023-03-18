@@ -3,8 +3,7 @@ local float = require('mug.module.float')
 local extmark = require('mug.module.extmark')
 local hl = require('mug.module.highlight')
 local map = require('mug.module.map')
-local timer = require('mug.module.timer')
-local branch_stats = require('mug.branch').branch_stats
+local branch = require('mug.branch')
 
 local HEADER, NAMESPACE = 'mug/index', 'MugIndex'
 local INPUT_TITLE, INPUT_WIDTH = 'Commit', 54
@@ -13,10 +12,10 @@ local float_handle, input_handle = 0, 0
 local float_height = 2
 local enable_ignored = false
 
-local ns_add = vim.api.nvim_create_namespace('mugIndex_add')
-local ns_force = vim.api.nvim_create_namespace('mugIndex_force')
-local ns_reset = vim.api.nvim_create_namespace('mugIndex_reset')
-local ns_error = vim.api.nvim_create_namespace('mugIndex_error')
+local ns_add = vim.api.nvim_create_namespace(NAMESPACE .. '_Add')
+local ns_force = vim.api.nvim_create_namespace(NAMESPACE .. '_Force')
+local ns_reset = vim.api.nvim_create_namespace(NAMESPACE .. '_Reset')
+-- local ns_error = vim.api.nvim_create_namespace(NAMESPACE .. '_Error')
 
 ---@class Mug
 ---@field index_add_key string key to git add selection
@@ -44,36 +43,12 @@ hl.store('MugIndexStage', { link = 'Statement' })
 hl.store('MugIndexUnstage', { link = 'ErrorMsg' })
 
 local function float_win_hl()
-  vim.api.nvim_command([[syn match MugIndexHeader "^##\s.\+$" display oneline]])
-  vim.api.nvim_command([[syn match MugIndexUnstage "^\s.[MADRC]\s" display]])
-  vim.api.nvim_command([[syn match MugIndexStage "^\s[MADRC]" display]])
-  vim.api.nvim_command([[syn match MugIndexUnstage "^[?!U]\{2}" display]])
-end
-
----@param messages table Error messages
----@param row number Line to put virtual text
-local function virtual_warning(messages, row)
-  local winid = vim.api.nvim_get_current_win()
-  local bufnr = vim.api.nvim_get_current_buf()
-  local msg
-  local msg_count = #messages
-  local wait, delay = 4000, 400
-  local hlname = 'MugIndexWarning'
-
-  timer.discard(winid, function()
-    extmark.clear_ns(bufnr, ns_error, 0, -1)
-  end)
-  timer.set(winid, wait, delay, function(i, timeout)
-    if i > msg_count then
-      return true
-    end
-
-    msg = '(' .. i .. '/' .. msg_count .. ')' .. messages[i]
-    extmark.virtual_txt(bufnr, row, 0, ns_error, msg, hlname)
-    vim.defer_fn(function()
-      extmark.clear_ns(bufnr, ns_error, 0, -1)
-    end, timeout)
-  end)
+  vim.api.nvim_command([[
+    syn match MugIndexHeader "^##\s.\+$" display
+    syn match MugIndexUnstage "^\s.[MADRC]\s" display
+    syn match MugIndexStage "^\s[MADRC]" display
+    syn match MugIndexUnstage "^[?!U]\{2}" display
+  ]])
 end
 
 ---Get git index and status
@@ -82,20 +57,19 @@ end
 ---@return table # Git status result
 local function get_stats(bang)
   local ignore = bang or enable_ignored
-  local list = branch_stats(nil, false, ignore)
-  local err = list[1] == 'Not a git repository' or list[1] == 'fatal:'
-  float_height = #list
+  local result = branch.branch_stats(_, false, ignore)
+  local err = result[1] == 'Not a git repository' or result[1] == 'fatal:'
+  float_height = #result
 
-  for i, v in ipairs(list) do
-    list[i] = ' ' .. v
+  for i, v in ipairs(result) do
+    result[i] = ' ' .. v
   end
 
-  return err, list
+  return err, result
 end
 
----@param height number Floating-window height
 ---@return boolean # Whether the index has changed
-local function do_stage(height)
+local function do_stage()
   local linewise = {
     { subcmd = 'add', ns = ns_add, selections = add_lines },
     { subcmd = 'add', force = '--force', ns = ns_force, selections = force_lines },
@@ -137,7 +111,7 @@ local function do_stage(height)
   end
 
   if not vim.tbl_isempty(error_msg) then
-    virtual_warning(error_msg, vim.api.nvim_win_get_height(0))
+    extmark.warning(error_msg, vim.api.nvim_win_get_height(0))
   end
 
   return skip ~= 3 and true
@@ -164,7 +138,7 @@ local function update_buffer(result)
 
   if result and vim.api.nvim_get_vvar('shell_error') ~= 0 then
     local height = vim.api.nvim_win_get_height(0)
-    virtual_warning(result, height)
+    extmark.warning(result, height)
   end
 end
 
@@ -172,24 +146,19 @@ end
 ---@alias ln number Specified line number
 
 ---@param ns namespace
----@param ln ln
-local function set_extmark(ns, ln)
+---@param row ln
+local function set_extmark(ns, row)
   local details = {
     add = { ns_add, add_lines, 'MugIndexAdd' },
     force = { ns_force, force_lines, 'MugIndexForce' },
     reset = { ns_reset, reset_lines, 'MugIndexReset' },
   }
 
-  -- local set = details[type]
-  extmark.select_line(ln, 4, unpack(details[ns]))
-  -- set[2] = extmark.select_line(ln, 3, unpack(set))
-  -- set = nil
+  extmark.select_line(row, 4, unpack(details[ns]))
 
   for _, v in ipairs(vim.tbl_keys(details)) do
     if v ~= ns then
-      -- local release = details[v]
-      -- release[2] = extmark.release_line(ln, unpack(release))
-      extmark.release_line(ln, unpack(details[v]))
+      extmark.release_line(row, unpack(details[v]))
     end
   end
 end
@@ -348,7 +317,7 @@ local function float_win_map()
     end
 
     if vim.api.nvim_buf_get_var(0, 'mug_branch_stats').s == 0 then
-      virtual_warning({ 'No stages' }, vim.api.nvim_win_get_height(0))
+      extmark.warning({ 'No stages' }, vim.api.nvim_win_get_height(0))
       return
     end
 
@@ -369,7 +338,7 @@ local function float_win_map()
 
   ---staging
   map.buf_set(true, 'n', '<CR>', function()
-    local update = do_stage(float_height)
+    local update = do_stage()
 
     if update then
       update_buffer()
@@ -383,7 +352,7 @@ local function float_win_post()
   float_win_map()
 end
 
-local function float_win(list)
+local function float_win(stdout)
   local name = vim.b.mug_branch_name
   local stats = vim.b.mug_branch_stats
 
@@ -393,7 +362,7 @@ local function float_win(list)
     width = 0.4,
     border = 'rounded',
     contents = function()
-      return list
+      return stdout
     end,
     post = float_win_post,
     leave = function()
@@ -412,10 +381,10 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
   end
 
   enable_ignored = opts.bang
-  local err, list = get_stats(enable_ignored)
+  local err, stdout = get_stats(enable_ignored)
 
   if err then
-    util.notify(list[1], HEADER, 3)
+    util.notify(stdout[1], HEADER, 3)
     return
   end
 

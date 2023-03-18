@@ -1,9 +1,13 @@
+local timer = require('mug.module.timer')
+
 ---@class extmark
 ---@field release_line function
 ---@field select_line function
 ---@field virtual_txt function
 ---@field clear_ns function
+---@field warning function
 local M = {}
+local ns_error = vim.api.nvim_create_namespace('MugExtmark')
 
 ---@param row number Cursor line number
 ---@param col number Extmark start column
@@ -20,7 +24,7 @@ local function _select(row, col, hl, ns)
     hl_group = hl,
   })
 
-  return { ext_id = extid, line_num = row, contents = contents:sub(col + 1) }
+  return { ext_id = extid, line_num = row, hl_group = hl, contents = contents:sub(col + 1) }
 end
 
 ---@param ln number Element number of table(Selection)
@@ -59,6 +63,7 @@ M.select_line = function(row, col, ns, selection, hl)
   end
 
   table.insert(selection, _select(row, col, hl, ns))
+
   return selection
 end
 
@@ -89,6 +94,32 @@ M.clear_ns = function(bufnr, ns, start, last)
   if vim.api.nvim_buf_is_valid(bufnr) then
     vim.api.nvim_buf_clear_namespace(bufnr, ns, start, last)
   end
+end
+
+---@param messages table Error messages
+---@param row number Line to put virtual text
+M.warning = function(messages, row)
+  local winid = vim.api.nvim_get_current_win()
+  local bufnr = vim.api.nvim_get_current_buf()
+  local msg
+  local msg_count = #messages
+  local wait, delay = 4000, 400
+  local hlname = vim.fn.hlexists('MugExtWarning') == 1 and 'MugExtWarning' or 'ErrorMsg'
+
+  timer.discard(winid, function()
+    M.clear_ns(bufnr, ns_error, 0, -1)
+  end)
+  timer.set(winid, wait, delay, function(i, timeout)
+    if i > msg_count then
+      return true
+    end
+
+    msg = '(' .. i .. '/' .. msg_count .. ')' .. messages[i]
+    M.virtual_txt(bufnr, row, 0, ns_error, msg, hlname)
+    vim.defer_fn(function()
+      M.clear_ns(bufnr, ns_error, 0, -1)
+    end, timeout)
+  end)
 end
 
 return M
