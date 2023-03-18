@@ -7,10 +7,10 @@
 #
 ## Normal mode #########################################################
 #   ^       toggle spellcheck
+#   gd      open git diff window horizontally
+#   gD      open git diff window vertically
 #   <F5>    insert date-time
-#   <F6>    open git diff window horizontally
-#   <F7>    open git diff window vertically
-#   <F8>    insert commit message (HEAD)
+#   <F6>    insert commit message (HEAD)
 ## Insert mode #########################################################
 # Abbreviations "abbrev<space>" or "abbrev<C-]>"
 #   bu  build          pe  perf
@@ -21,8 +21,8 @@
 #   br  BREAKING CHANGE:
 #   rr  Refs:
 ## Command mode ########################################################
-#   :C      commit
-#   :CA     commit amend
+#   :C      commit          :CS     commit sign
+#   :CA     commit amend    :CSA    commit sign amend
 #   :CE     commit empty
 ########################################################################
 # vim:ft=gitcommit

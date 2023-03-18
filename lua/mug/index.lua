@@ -229,8 +229,15 @@ local function input_commit_map()
     update_imputbar_title(title, keyid, sign, amend)
   end, { buffer = true })
   vim.keymap.set('i', '<CR>', function()
-    local input = vim.api.nvim_get_current_line()
-    local cmdline = util.gitcmd({ cmd = 'commit', opts = { sign, amend, '--cleanup=default', '-m' .. input } })
+    local msg = vim.api.nvim_get_current_line()
+
+    if msg == '' and #amend ~= 0 then
+      msg = '--no-edit'
+    else
+      msg = string.format('-m %s', msg)
+    end
+
+    local cmdline = util.gitcmd({ cmd = 'commit', opts = { sign, amend, '--cleanup=default', msg } })
 
     vim.api.nvim_command('stopinsert!|quit')
     local stdout = vim.fn.systemlist(cmdline)

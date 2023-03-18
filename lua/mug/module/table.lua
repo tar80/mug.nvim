@@ -45,6 +45,7 @@ M.modules = {
   'mug.index',
   'mug.merge',
   'mug.mkrepo',
+  'mug.patch',
   'mug.rebase',
   'mug.terminal',
   'mug.show',
