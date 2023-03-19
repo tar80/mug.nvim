@@ -5,7 +5,7 @@ local map = require('mug.module.map')
 local job = require('mug.module.job')
 
 local HEADER = 'mug/diff'
-local DIFF_URI = 'mug:/cat-file/'
+local DIFF_URI = 'mug://cat-file/'
 
 ---@class Mug
 ---@field diff_position string Position of diff window
@@ -25,6 +25,14 @@ local function on_detach(bufnr, diffnr)
     once = true,
     buffer = diffnr,
     callback = function()
+      local bufs = vim.api.nvim_list_bufs()
+
+      for _, v in ipairs(bufs) do
+        if vim.api.nvim_buf_get_name(v):find(DIFF_URI, 1, true) then
+          return
+        end
+      end
+
       map.buf_del(bufnr, 'x', { 'do', 'dp', 'dd' })
       map.buf_del(bufnr, { 'x', 'n' }, 'du')
     end,
@@ -89,13 +97,21 @@ end
 ---@return string # Adjusted comparison file path
 ---@return boolean # The comparison target is the same file
 local function adjust_path(path)
-  local cwd =  util.pwd()
+  local cwd = util.pwd()
   local current_file = util.filepath('/')
-  local pathspec = vim.loop.fs_realpath(vim.fn.expand(path)):gsub('\\', '/')
-  pathspec = pathspec:find(cwd, 1, true) and pathspec:sub(#cwd + 2) or pathspec
-  local is_same = pathspec == current_file
+  path = vim.fn.expand(path)
 
-  return pathspec, is_same
+  if vim.fn.getftype(path) == 'link' then
+    ---NOTE: uv.fs_realpath() changes the path even when it is not a simlink
+    --- resolve() returns the original path as is
+    path = vim.fn.resolve(path)
+  end
+
+  path = util.conv_slash(path)
+  path = path:find(cwd, 1, true) and path:sub(#cwd + 2) or path
+  local is_same = path == current_file
+
+  return path, is_same
 end
 
 ---@param name string Diff command name
