@@ -19,8 +19,11 @@ mug(mixed utilities for git)は、neovim 上で git を操作するためのコ�
     require('mug').setup({
     ...,
     variables = {
-      ...
+      ...,
       },
+    highlights = {
+      ...,
+      }
     })
   end,
 }
@@ -35,9 +38,12 @@ use({ 'tar80/mug.nvim',
     require('mug').setup({
     ...,
     variables = {
-      ...
+      ...,
       },
-    })
+    highlights = {
+      ...,
+      }
+    }),
   end,
 })
 ```
@@ -81,6 +87,7 @@ MugFloat のフォーカスに割り当てられます。
 ```lua:
 require('mug').setup({
   variables = {
+    symbol_not_repository = '---',
     root_patterns = { '.git/', '.gitignore' },
     ignore_filetypes = { 'git', 'gitcommit', 'gitrebase' },
   }
@@ -104,6 +111,9 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
   ブランチのキャッシュ・デタッチ状態の取得は[kana/vim-g/branch](https://github.com/kana/vim-g)の機能を取り入れています。
 
 **variables**
+
+- symbol_not_repository(上書き)  
+  カレントディレクトリが git リポジトリではなかったときに b:mug_branch_name に設定される文字列です。
 
 - root_patterns `table`(上書き)  
   記述フォーマットは vim-findroot の root marker patterns に倣います。優先度があり、先に記述されたパターンが優先されます。
@@ -209,8 +219,8 @@ require('mug').setup({
   variables = {
     strftime = '%c',
     commit_notation = 'none',
-    commit_diffcached_height = 20,
-    commit_gpg_sign = nil
+    commit_gpg_sign = nil,
+    patch_window_height = 20,
   }
 })
 ```
@@ -222,7 +232,8 @@ require('mug').setup({
 
 - `amend` ステージされた変更を HEAD に追加します。
 - `empty` 空コミットを作成します。コミットメッセージには"empty commit(created by mug)"が設定されます。
-- `fixup` コミット選択フローティングウィンドウが起動します。\<CR>で選択したコミットを対象にコミットメッセージ"fixup! \<commit>"が設定されます。
+- ~~`fixup`~~ **Deleted**
+- `rebase` 現在使用するとエラーがでます。 fixupの代替。
 - `m <commit-message>` 直接コミットメッセージを入力できます。スペースを含む場合でも""で括る必要はありません。
 
 **:MugCommitSign[!] [\<sub-command>] [\<commit-message>]**
@@ -237,20 +248,22 @@ require('mug').setup({
 | モード |      キー       | 説明                                |
 | :----: | :-------------: | :---------------------------------- |
 |   n    |        ^        | スペルチェックをトグル              |
+|   n    |       gd        | 差分バッファを水平方向にトグル      |
+|   n    |       gD        | 差分バッファを縦方向にトグル        |
 |  n,i   |       F5        | 時刻の挿入                          |
-|   n    |       F6        | 差分バッファを水平方向にトグル      |
-|   n    |       F7        | 差分バッファを縦方向にトグル        |
-|   n    |       F8        | HEAD のコミットメッセージを書き出す |
-|   n    | q(差分バッファ) | 差分バッファ閉じる                  |
+|   n    |       F6        | HEAD のコミットメッセージを書き出す |
+|   n    | q(差分バッファ) | 差分バッファ閉じる(キャッシュ削除)  |
 
-NOTE: 差分バッファはトグルしても更新されません。更新が必要なときは`:bwipeout`で一度完全に削除します。
+NOTE: 差分バッファはトグルしても更新されません。更新が必要なときは`q`で一度バッファを閉じます。
 
 コミット編集バッファは`git commit`で開かれたバッファではないため如何なる変更もリポジトリに影響を与えません。
 コミットの作成にはコマンドを使用します。
 
-- `:C` commit
-- `:CA` commit amend
-- `:CE` commit empty
+- `:C`    commit
+- `:CA`   commit amend
+- `:CE`   commit empty
+- `:CS`   commit-sign
+- `:CSA`  commit-sign amend
 
 **variables**
 
@@ -266,21 +279,14 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
   スクリプト内`M.additional_settings`に関数を設定すれば、キーマップやコマンドを追加することもできます。
   記述方法は他のテンプレートを参考にしてください。
 
-- commit_diffcached_height `integer`(上書き)  
-  `<F6>`で開く差分バッファの高さを指定します。
+- ~~commit_diffcached_height `integer`(上書き)~~ **Deleted**
 
 - commit_gpg_sign `string`(上書き)  
   署名に使用する鍵(gpg)を指定します。  
   指定しない場合はデフォルト(コミッター ID)になります。
 
-**highlights**
-
-`MugCommit fixup`で使用
-
-- MugLogHash `Special`
-- MugLogDate `Statement`
-- MugLogOwner `Conditional`
-- MugLogHead `Keyword`
+- patch_window_height `integer`(上書き)
+  差分バッファの高さを指定します。
 
 [commit.webm](https://user-images.githubusercontent.com/45842304/222901039-977a589f-6d05-4dc1-9fdf-7af001c971e5.webm)
 
@@ -334,7 +340,7 @@ MugConflict はロケーションリストにキーを設定します。
 **variables**
 
 - loclist_position `string`(上書き)  
-  ロケーションリストの表示位置を指定します。`top` `bottom` `lef` `right`を指定できます。
+  ロケーションリストの表示位置を指定します。`top` `bottom` `lef` `right`を指定します。
 
 - loclist_disable_number `boolean`(上書き)  
   ロケーションリストの行番号を非表示にするなら`true`を指定します。
@@ -348,12 +354,12 @@ MugConflict はロケーションリストにキーを設定します。
 
 **highlights**
 
-- MugConflictBeacon `Search`
 - MugConflictHeader `fg=#777777 bg=#000000`
 - MugConflictBase `DiffDelete`
 - MugConflictTheirs `DiffAdd`
 - MugConflictOurs `DiffChange`
 - MugConflictBoth `Normal`をベースに赤と緑を強調した色
+- MugConflictBeacon `Search`
 
 [conflict.webm](https://user-images.githubusercontent.com/45842304/222901105-84ba9c08-9f06-4bd9-ab33-701f8df9c4ac.webm)
 
@@ -398,7 +404,7 @@ require('mug').setup({
 **variables**
 
 - diff_position `string`(上書き)  
-  `<position>`のデファルト値を`top` `bottom` `left` `right`のいずれかに設定できます。
+  `<position>`のデファルト値を`top` `bottom` `left` `right`のいずれかを指定します。
 
 </details>
 <details>
@@ -657,10 +663,10 @@ neovim をネストさせない機能があります。
 - term_shell `string`(上書き)  
   `<command>`を指定しなかったときに指定したシェルを実行します。初期値は`&shell`です。
 
-- term_position `integer`(上書き)  
-  MugTerm の初期位置を設定します。初期値は``(空文字)です。
+- term_position `string`(上書き)  
+  MugTerm の初期位置を設定します。`top` `bottom` `left` `right` `float`のいずれかを指定します。
 
-- term_disable_columns `boolean`(上書き)
+- term_disable_columns `boolean`(上書き)  
   行番号などを非表示にします。
 
 - term_nvim_pseudo `boolean`(上書き)  
@@ -685,11 +691,13 @@ neovim をネストさせない機能があります。
     mkrepo = false,
     show = false,
     terminal = false,
+
     variables = {
       -- Float
       float_winblend = 0,
 
       -- Findroot
+      symbol_not_repository = '---',
       root_patterns = { '.git/', '.gitignore' },
       ignore_filetypes = { 'git', 'gitcommit', 'gitrebase' },
 
@@ -701,7 +709,7 @@ neovim をネストさせない機能があります。
       -- Commit
       strftime = '%c',
       commit_notation = 'none',
-      commit_diffcached_height = 20,
+      -- commit_diffcached_height = 20, [Deleted]
       commit_gpg_sign = nil,
 
       -- Conflict
@@ -729,6 +737,9 @@ neovim をネストさせない機能があります。
       remote_url = nil,
       commit_initial_message = 'Initial commit',
 
+      -- Show
+      show_command = 'MugShow',
+
       -- Term
       term_command = 'MugTerm',
       term_height = 1, -- floating window
@@ -738,13 +749,44 @@ neovim をネストさせない機能があります。
       term_disable_columns = nil,
       term_nvim_pseudo = nil,
       term_nvim_opener = nil,
+
+      -- Patch
+      -- git diffの差分を表示する窓
+      patch_window_height = 20,
+    },
+
+    highlights = {
+      -- Conflict
+      MugConflictHeader = { fg = '#777777' bg = '#000000' },
+      MugConflictBase = { link = 'DiffDelete' },
+      MugConflictTheirs = { link = 'DiffAdd' },
+      MugConflictOurs = { link = 'DiffChange' },
+      MugConflictBoth = { bg = Normalをベースに赤と緑を強調した色 },
+      MugConflictBeacon = { link = 'Search' },
+
+      -- Index
+      MugIndexHeader = { link = 'String' },
+      MugIndexStage = { link = 'Statement' },
+      MugIndexUnstage = { link = 'ErrorMsg' },
+      MugIndexWarning = { link = 'ErrorMsg' },
+      MugIndexAdd = { bg = Normalをベースに緑を強調した色 },
+      MugIndexForce = { bg = Normalをベースに青を強調した色 },
+      MugIndexReset = { bg = Normalをベースに赤を強調した色 },
+
+      -- Rebase
+      -- MugLogHash = { link = 'Special' },
+      -- MugLogDate = { link = 'Statement' },
+      -- MugLogOwner = { link = 'Conditional' },
+      -- MugLogHead = { link = 'Keyword' },
     },
   })
 ```
 
 ## TODO
 
-- [ ] rebase をなんとかしたい
+- [x] rebase もうすぐ完成
+- [x] ハイライトの設定を追加
+- [ ] log を追加したい
 - [ ] テスト そのうち
 
 ## 謝辞
