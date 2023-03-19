@@ -23,7 +23,7 @@ local discolumns = {
 ---@filed term_shell string Specifies the shell to use with MugTerm
 ---@field term_position string Specifies the position of the buffer
 ---@filed term_disable_columns All columns are disabled
----@filed term_nvim_pseudo boolean Do not start new nvim instance on MugTermterm
+---@filed term_nvim_pseudo boolean Do not display new nvim instance on MugTerm
 ---@filed term_nvim_opener string Specifies the position when opening a buffer from MugTerm
 ---@field term_height number
 ---@field term_width number
@@ -31,7 +31,7 @@ _G.Mug._def('term_height', 1, true)
 _G.Mug._def('term_width', 0.9, true)
 
 ---@param display boolean Has columns
----@param set? boolean Initialize table(columns)
+---@param set? boolean Overwrite store_columns
 local function display_columns(display, set)
   if not _G.Mug.term_disable_columns then
     return
@@ -64,7 +64,7 @@ local function on_attach(bufnr)
     callback = function()
       display_columns(true)
     end,
-    desc = 'Adjust columns',
+    desc = 'Adjust information columns',
   })
   vim.api.nvim_create_autocmd({ 'BufWipeout' }, {
     group = 'mug',
@@ -133,17 +133,27 @@ local function get_args(fargs)
   return pos, fargs
 end
 
+local function get_server()
+  local s = vim.api.nvim_get_vvar('servername')
+
+  if not s then
+    s = vim.fn.serverstart()
+  end
+
+  return s
+end
+
 M.open = function(count, bang, fargs)
   if float.focus(term_handle) then
     return
   end
 
   local pos, cmd = get_args(fargs)
-  local servername = vim.api.nvim_get_vvar('servername')
+  local server = get_server()
 
   if bang or _G.Mug.term_nvim_pseudo then
-    shell.set_env('NVIM_LISSTEN_ADRESS', servername)
-    shell.nvim_client()
+    shell.set_env('NVIM_LISSTEN_ADRESS', server)
+    shell.nvim_client('GIT_EDITOR')
   end
 
   display_columns(true, true)

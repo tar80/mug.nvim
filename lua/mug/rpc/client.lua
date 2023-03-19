@@ -7,13 +7,23 @@ local M = {}
 local api = vim.api
 local fn = vim.fn
 
+M.post_setup_buffer = function(callback)
+  M.post_load = function()
+    callback()
+  end
+end
+
 M.open_buffer = function(filepath, client)
   local opener = _G.Mug.term_nvim_opener or 'tabnew'
   filepath = fn.fnameescape(filepath)
   local cmdline = string.format('%s %s', opener, filepath)
 
   api.nvim_command(cmdline)
+  api.nvim_command('clearjumps')
   api.nvim_buf_set_option(0, 'bufhidden', 'wipe')
+
+  M.post_load()
+  M.post_load = nil
 
   local bufnr = api.nvim_get_current_buf()
   local mode = client:find(':%d+$') and 'tcp' or 'pipe'
@@ -29,6 +39,7 @@ M.open_buffer = function(filepath, client)
         return
       end
 
+      vim.env.NVIM_LISSTEN_ADRESS = nil
       pcall(vim.rpcrequest, client_ch, 'nvim_command', 'qall')
     end,
     desc = 'Close rpc-client',
