@@ -21,6 +21,7 @@
 ---@field termopen function Open terminal as buffer
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
+local is_win = vim.fn.has('win32')
 
 ---@param item string String to convert
 ---@return string
@@ -102,11 +103,11 @@ local function merge_message(message, name, loglevel)
   local merged = ''
   local connect
 
-  -- if name == 'confirm' then
-  --   tail_blank = adjust_tail_blank('MoreMsg')
-  -- elseif loglevel == 3 then
-  --   tail_blank = adjust_tail_blank('WarningMsg')
-  -- end
+  if name == 'confirm' then
+    tail_blank = adjust_tail_blank('MoreMsg')
+  elseif loglevel == 3 then
+    tail_blank = adjust_tail_blank('WarningMsg')
+  end
 
   for _, v in ipairs(message) do
     if v:find('[', 1, true) == 1 and not v:find(']', 1, true) and v:find('%s$', 2) then
@@ -143,6 +144,10 @@ M.notify = function(message, title, loglevel, multiline)
   if not package.loaded['notify'] then
     local concatenate = multiline and '  \n' or ' '
     header = '[' .. title .. ']' .. concatenate
+  end
+
+  if is_win then
+    message = message:gsub('%[[%d;]*[%w]', '')
   end
 
   vim.notify(header .. vim.trim(message), loglevel, { title = title })
