@@ -32,6 +32,11 @@ M.additional_settings = function()
     patch.open('right')
   end, 'Open diff-buffer horizontally')
 
+  ---Wipeout diffchaced-window
+  map.buf_set(true, 'n', 'q', function()
+    patch.close()
+  end, 'Close patch buffer')
+
   ---Insert datetime
   map.buf_set(true, { 'n', 'i' }, '<F5>', function()
     local time = os.date(_G.Mug.strftime)
