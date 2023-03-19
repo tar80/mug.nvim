@@ -57,7 +57,7 @@ end
 ---@return table # Git status result
 local function get_stats(bang)
   local ignore = bang or enable_ignored
-  local result = branch.branch_stats(_, false, ignore)
+  local result = branch.branch_stats(nil, false, ignore)
   local err = result[1] == 'Not a git repository' or result[1] == 'fatal:'
   float_height = #result
 
@@ -384,6 +384,10 @@ end
 
 vim.api.nvim_create_user_command(NAMESPACE, function(opts)
   if float.focus(float_handle) then
+    return
+  end
+
+  if not util.has_repo(HEADER) then
     return
   end
 

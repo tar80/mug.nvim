@@ -6,8 +6,8 @@
 local util = require('mug.module.util')
 
 ---@class branch
----@field branch_name function
----@field branch_stats function
+---@field branch_name fun(path: string) : string
+---@field branch_stats fun(root: string?, responce?: boolean, ignore?:boolean) : table
 local M = {}
 local HEADER = 'mug/branch'
 local branch_cache = {}
@@ -134,15 +134,15 @@ local function get_branch_stats(root, chain, ignore)
   return { s = staged, u = unstaged, c = conflicted }, list
 end
 
----@param root string Git reopsitory root path
----@return string? # Branch name
-M.branch_name = function(root)
-  local key = branch_cache_key(root)
+---@param path string Git reopsitory root path
+---@return string? # Git branch name
+M.branch_name = function(path)
+  local key = branch_cache_key(path)
   local result = 'cached'
 
-  if branch_cache[root] == nil or branch_cache[root].key ~= key then
-    if vim.fn.isdirectory(root .. '/.git') == 0 then
-      branch_cache[root] = { name = nil, info = nil, key = key, stats = nil }
+  if branch_cache[path] == nil or branch_cache[path].key ~= key then
+    if vim.fn.isdirectory(path .. '/.git') == 0 then
+      branch_cache[path] = { name = nil, info = nil, key = key, stats = nil }
       result = ''
     else
       if vim.tbl_count(branch_cache) >= 20 then
@@ -150,15 +150,15 @@ M.branch_name = function(root)
         branch_cache = {}
       end
 
-      local name, info = get_branch_info(root)
-      branch_cache[root] = { name = name, info = info, key = key, stats = get_branch_stats(root, true) }
+      local name, info = get_branch_info(path)
+      branch_cache[path] = { name = name, info = info, key = key, stats = get_branch_stats(path, true) }
       result = 'saved'
     end
   end
 
-  vim.b.mug_branch_name = branch_cache[root].name or '---'
-  vim.b.mug_branch_info = branch_cache[root].info
-  vim.b.mug_branch_stats = branch_cache[root].stats
+  vim.b.mug_branch_name = branch_cache[path].name or _G.Mug.symbol_not_repository
+  vim.b.mug_branch_info = branch_cache[path].info
+  vim.b.mug_branch_stats = branch_cache[path].stats
 
   return result
 end
@@ -166,7 +166,7 @@ end
 ---@param root string? Project root path
 ---@param response? boolean Show response message
 ---@param ignore? boolean Add option "--ignored"
----@return table|function # Debug message or util.notify()
+---@return table # Debug message or util.notify()
 M.branch_stats = function(root, response, ignore)
   if not root then
     root = util.pwd()
@@ -174,14 +174,23 @@ M.branch_stats = function(root, response, ignore)
 
   if branch_cache[root] == nil then
     local msg = 'Not a git repository'
-    return response and util.notify(msg, HEADER, 3) or { msg }
+
+    if response then
+      util.notify(msg, HEADER, 3)
+    end
+
+    return { msg }
   end
 
-  local stats, list = get_branch_stats(root, false, ignore)
+  local stats, stdout = get_branch_stats(root, false, ignore)
   vim.b.mug_branch_stats = stats
   branch_cache[root].stats = stats
 
-  return response and util.notify('Update index information', HEADER, 2) or list
+  if response then
+    util.notify('Update index information', HEADER, 2)
+  end
+
+  return stdout
 end
 
 return M

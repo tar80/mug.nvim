@@ -13,6 +13,7 @@ local function set_default(overwrite)
 
   method('root_patterns', { '.git/', '.gitignore' })
   method('ignore_filetypes', { 'git', 'gitcommit', 'gitrebase' })
+  method('symbol_not_repository', '---')
   method('loglevel', 0)
   method('edit_command', 'Edit', true)
   method('file_command', 'File', true)
@@ -32,6 +33,7 @@ end
 ---@param opts userspec
 local function change_settings(opts)
   local strings = {
+    'symbol_not_repository',
     'strftime',
     'remote_url',
     'float_winblend',

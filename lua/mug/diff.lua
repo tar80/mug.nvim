@@ -117,10 +117,6 @@ end
 ---@param name string Diff command name
 ---@param ... string Diff command arguments
 local function let_compare(name, ...)
-  if not util.has_repo(HEADER) then
-    return
-  end
-
   local args = { ... }
   local win_pos = window_position()
   local options = { pos = win_pos, treeish = '', path = '%' }
@@ -207,6 +203,10 @@ local mug_diff = function(name)
   vim.api.nvim_create_user_command('MugDiff' .. name, function(opts)
     if #opts.fargs > 3 then
       util.notify('There are many arguments. All you need is [<position>] [<tree-ish>] [<filespec>]', HEADER, 3)
+      return
+    end
+
+    if not util.has_repo(HEADER) then
       return
     end
 

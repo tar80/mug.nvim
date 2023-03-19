@@ -291,8 +291,14 @@ M.has_repo = function(header)
   local path = vim.fs.find('.git', { type = 'directory', upward = true })[1]
 
   if not path then
-    M.notify('Not a git repository', header, 2)
+    M.notify('Not a git repository', header, 3)
     return false, ''
+  end
+
+  local branch_name = vim.b.mug_branch_name
+
+  if not branch_name or branch_name == _G.Mug.symbol_not_repository then
+    require('mug.workspace').set_workspace_root(path)
   end
 
   return true, path

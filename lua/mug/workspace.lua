@@ -4,10 +4,10 @@
 --]]
 
 local util = require('mug.module.util')
-local branch_name = require('mug.branch').branch_name
+local branch = require('mug.branch')
 
 ---@class ws
----@field set_workspace_root function
+---@field set_workspace_root fun(response?: boolean) : string
 local M = {}
 local HEADER = 'mug/findroot'
 local FINDROOT_DISABLED = 'mug_findroot_disable'
@@ -54,8 +54,10 @@ end
 ---@param marker string Git repository root marker
 ---@param path string Detected path
 local function query_branch_is(marker, path)
-  if marker:find('.git', 1, true) then
-    branch_name(path)
+  if marker == '' then
+    vim.b.mug_branch_name = _G.Mug.symbol_not_repository
+  elseif marker:find('.git', 1, true) then
+    branch.branch_name(path)
   end
 end
 
@@ -98,7 +100,7 @@ local function detect_project_root(path)
   end)
 
   local root_patterns = vim.deepcopy(_G.Mug.root_patterns)
-  local ref = ''
+  local marker = ''
 
   repeat
     local stat, ret, root, pattern = coroutine.resume(co, root_patterns, path)
@@ -106,11 +108,11 @@ local function detect_project_root(path)
     if stat then
       root_patterns = { unpack(root_patterns, 1, ret - 1) }
       path = root
-      ref = pattern
+      marker = pattern
     end
   until coroutine.status(co) == 'dead'
 
-  query_branch_is(ref, path)
+  query_branch_is(marker, path)
 
   return path
 end
@@ -118,6 +120,9 @@ end
 ---@param response? boolean show result message
 ---@return string # Result of comparing parent directories
 M.set_workspace_root = function(response)
+  local disable_global = vim.g[FINDROOT_DISABLED]
+  local disable_local = vim.b[FINDROOT_DISABLED]
+
   ---NOTE: Need "nil", not "vim.NIL"
   vim.g[FINDROOT_DISABLED] = nil
   vim.b[FINDROOT_DISABLED] = nil
@@ -140,10 +145,11 @@ M.set_workspace_root = function(response)
     return status
   end
 
-  local workspace = detect_project_root(parent_dir)
+  local workspace = detect_project_root(parent_dir):gsub('/$', '')
+  local pwd = util.pwd()
 
   if workspace ~= nil then
-    if workspace == util.pwd() then
+    if workspace == pwd then
       if response then
         util.notify('Skipped pointing to the same path', HEADER, 3, false)
       end
@@ -166,6 +172,9 @@ M.set_workspace_root = function(response)
     util.notify('Changed root ' .. parent_dir, HEADER, 2, false)
   end
 
+  vim.g[FINDROOT_DISABLED] = disable_global
+  vim.b[FINDROOT_DISABLED] = disable_local
+
   return 'change'
 end
 
@@ -179,7 +188,7 @@ vim.api.nvim_create_autocmd({ 'DirChangedPre' }, {
       return
     end
 
-    local path = util.normalize(vim.api.nvim_get_vvar('event').directory, '/')
+    local path = util.conv_slash(vim.api.nvim_get_vvar('event').directory)
     detect_project_root(path)
   end,
   desc = 'Detect project-root and set git-status',

@@ -269,13 +269,7 @@ local function mug_commit(name)
       return
     end
 
-    local branch_name = vim.b.mug_branch_name
-
-    if not branch_name or branch_name == '---' then
-      require('mug.workspace').set_workspace_root()
-    end
-
-    if not util.is_repo(HEADER) then
+    if not util.has_repo(HEADER) then
       return
     end
 

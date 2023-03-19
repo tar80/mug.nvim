@@ -12,7 +12,7 @@ local function do_fetch(command)
 
   local function notify()
     if #stdout == 0 and err == 2 then
-      stdout = { 'Succeeded' }
+      stdout = { 'Successful' }
     end
 
     table.remove(stdout, 1)
@@ -129,7 +129,12 @@ end
 local function mug_merge(name)
   vim.api.nvim_create_user_command(NAMESPACE .. name, function(opts)
     local cmdspec = name == '' and '--no-ff' or '--ff-only'
-    local pwd = util.pwd()
+    local ok, pwd = util.has_repo(HEADER)
+
+    if not ok then
+      return
+    end
+
     local merge_msg = pwd .. '/.git/MERGE_MSG'
 
     for _, v in ipairs(comp_on_process) do
@@ -169,6 +174,10 @@ local function mug_merge(name)
 end
 
 vim.api.nvim_create_user_command(NAMESPACE .. 'To', function(opts)
+  if not util.has_repo(HEADER) then
+    return
+  end
+
   local force = opts.bang and '--force' or ''
   local branchspec = vim.b.mug_branch_name .. ':' .. opts.args
 

@@ -178,9 +178,6 @@ vim.api.nvim_create_user_command('MugFindroot', function(opts)
   elseif opts.args == 'stopglobal' then
     vim.api.nvim_set_var(FINDROOT_DISABLED, true)
   else
-    ---NOTE: Want nil, not vim.NIL
-    vim.b[FINDROOT_DISABLED] = nil
-    vim.g[FINDROOT_DISABLED] = nil
     set_ws_root(true)
   end
 end, {
@@ -195,6 +192,10 @@ function M.setup(options)
   mug_variables(options)
   mug_commands()
   mug_highlights(options)
+
+  if not (vim.b.mug_branch_name or vim.g[FINDROOT_DISABLED] or vim.b[FINDROOT_DISABLED])  then
+    vim.api.nvim_command('doautocmd mug BufEnter')
+  end
 
   -- vim.g.loaded_mug = true
 end
