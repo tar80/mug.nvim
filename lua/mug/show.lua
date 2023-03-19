@@ -1,22 +1,18 @@
 local float = require('mug.module.float')
+local syntax = require('mug.module.syntax')
 local notify = require('mug.module.util').notify
 local user_command = require('mug.module.util').user_command
+
 
 local HEADER, NAMESPACE = 'mug/show', 'MugShow'
 local float_handle = 0
 
 ---MugShow float-window syntaxs
 local show_syntax = function()
-  vim.api.nvim_command([[syntax region None start="="hs=s+1 end="$" contains=String,Boolean,Number,Delimiter]])
-  vim.api.nvim_command([[syntax match Number excludenl "\d\+$" contained]])
-  vim.api.nvim_command([[syntax match Delimiter "=" contained]])
-  vim.api.nvim_command([[syntax match Delimiter ","]])
-  vim.api.nvim_command([[syntax region String start='"' end='"' keepend]])
-  vim.api.nvim_command([[syntax region String start="'" end="'" keepend]])
-  vim.api.nvim_command([[syntax keyword Boolean true false]])
-  vim.api.nvim_command([[syntax region DiffText start="^ +"hs=s+1 end="$"]])
-  vim.api.nvim_command([[syntax region DiffDelete start="^ -"hs=s+1 end="$"]])
-  vim.api.nvim_command([[syntax region Comment start="^\s\+--" end="$"]])
+  syntax.general()
+  syntax.log()
+  syntax.diff()
+  syntax.stats()
 end
 
 ---Extract type from literal and define

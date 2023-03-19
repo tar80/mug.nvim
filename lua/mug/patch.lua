@@ -2,6 +2,7 @@ local util = require('mug.module.util')
 local job = require('mug.module.job')
 local map = require('mug.module.map')
 local tbl = require('mug.module.table')
+local syntax_stats = require('mug.module.syntax').stats
 
 local M = {}
 local HEADER = 'mug/patch'
@@ -13,15 +14,6 @@ local preview_window = {}
 ---@class Mug
 ---@field patch_window_height number
 _G.Mug._def('patch_window_height', 20, true)
-
-local function apply_syntax()
-  vim.api.nvim_command([[
-      syntax match diffRemoved "-\+$" display
-      syntax match diffAdded "+\+\(-\+\)\?$" contains=diffRemoved keepend
-      syntax match Comment "\s|\s" display
-      syntax match Special "(new)" display
-    ]])
-end
 
 local function post_process(bufnr)
   vim.api.nvim_create_autocmd('BufWipeout', {
@@ -194,7 +186,7 @@ local function patch_buffer(commitish, treeish, bufinfo, filename, stdout)
     vim.api.nvim_win_set_option(winid, 'signcolumn', 'no')
     vim.api.nvim_win_set_option(winid, 'number', false)
     util.nofile(true, 'hide', 'nofile')
-    apply_syntax()
+    syntax_stats()
     maps()
     post_process(bufnr)
   else

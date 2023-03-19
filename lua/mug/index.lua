@@ -4,6 +4,7 @@ local extmark = require('mug.module.extmark')
 local hl = require('mug.module.highlight')
 local map = require('mug.module.map')
 local branch = require('mug.branch')
+local syntax_index = require('mug.module.syntax').index
 
 local HEADER, NAMESPACE = 'mug/index', 'MugIndex'
 local INPUT_TITLE, INPUT_WIDTH = 'Commit', 54
@@ -41,15 +42,6 @@ end)
 hl.store('MugIndexHeader', { link = 'String' })
 hl.store('MugIndexStage', { link = 'Statement' })
 hl.store('MugIndexUnstage', { link = 'ErrorMsg' })
-
-local function float_win_hl()
-  vim.api.nvim_command([[
-    syn match MugIndexHeader "^##\s.\+$" display
-    syn match MugIndexUnstage "^\s.[MADRC]\s" display
-    syn match MugIndexStage "^\s[MADRC]" display
-    syn match MugIndexUnstage "^[?!U]\{2}" display
-  ]])
-end
 
 ---Get git index and status
 ---@param bang? boolean Add "--ignored" option
@@ -355,7 +347,7 @@ end
 
 local function float_win_post()
   vim.api.nvim_buf_set_option(0, 'modifiable', false)
-  float_win_hl()
+  syntax_index()
   float_win_map()
 end
 
