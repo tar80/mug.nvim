@@ -17,10 +17,10 @@ end
 
 M.index = function()
   vim.api.nvim_command([[
-    syn match MugIndexHeader "^##\s.\+$" display
+    syn match MugIndexHeader "^\s##\s.\+$" display
     syn match MugIndexUnstage "^\s.[MADRC]\s" display
     syn match MugIndexStage "^\s[MADRC]" display
-    syn match MugIndexUnstage "^[?!U]\{2}" display
+    syn match MugIndexUnstage "^\s[?!U]\{2}" display
   ]])
 end
 

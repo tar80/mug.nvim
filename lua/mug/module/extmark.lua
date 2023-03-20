@@ -8,6 +8,7 @@ local timer = require('mug.module.timer')
 ---@field warning function
 local M = {}
 local ns_error = vim.api.nvim_create_namespace('MugExtmark')
+local get_line = vim.api.nvim_buf_get_lines
 
 ---@param row number Cursor line number
 ---@param col number Extmark start column
@@ -15,7 +16,7 @@ local ns_error = vim.api.nvim_create_namespace('MugExtmark')
 ---@param ns number Namespace
 ---@return table # {ext_id = extmark id, line_num = line number, contents = string linewise}
 local function _select(row, col, hl, ns)
-  local contents = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+  local contents = get_line(0, row - 1, row, false)[1]
   local linelen = contents == '' and 0 or vim.api.nvim_strwidth(contents)
   col = math.min(col, linelen)
   local extid = vim.api.nvim_buf_set_extmark(0, ns, row - 1, col, {
@@ -43,6 +44,7 @@ M.release_line = function(ln, ns, selection)
 
   return selection
 end
+
 
 ---@param row number Current line number
 ---@param col number Extmark start column
@@ -97,14 +99,15 @@ M.clear_ns = function(bufnr, ns, start, last)
 end
 
 ---@param messages table Error messages
+---@param level number Error level
 ---@param row number Line to put virtual text
-M.warning = function(messages, row)
+M.warning = function(messages, level, row)
   local winid = vim.api.nvim_get_current_win()
   local bufnr = vim.api.nvim_get_current_buf()
-  local msg
+  local header, msg
   local msg_count = #messages
   local wait, delay = 4000, 400
-  local hlname = vim.fn.hlexists('MugExtWarning') == 1 and 'MugExtWarning' or 'ErrorMsg'
+  local hlname = level > 3 and 'ErrorMsg' or 'WarningMsg'
 
   timer.discard(winid, function()
     M.clear_ns(bufnr, ns_error, 0, -1)
@@ -114,7 +117,10 @@ M.warning = function(messages, row)
       return true
     end
 
-    msg = '(' .. i .. '/' .. msg_count .. ')' .. messages[i]
+
+    header = msg_count > 1 and string.format('(%s/%s)', i, msg_count) or '!'
+    msg =  header .. messages[i]
+
     M.virtual_txt(bufnr, row, 0, ns_error, msg, hlname)
     vim.defer_fn(function()
       M.clear_ns(bufnr, ns_error, 0, -1)

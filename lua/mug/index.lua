@@ -1,22 +1,22 @@
-local util = require('mug.module.util')
-local float = require('mug.module.float')
+local branch = require('mug.branch')
 local extmark = require('mug.module.extmark')
+local float = require('mug.module.float')
 local hl = require('mug.module.highlight')
 local map = require('mug.module.map')
-local branch = require('mug.branch')
-local syntax_index = require('mug.module.syntax').index
+local syntax = require('mug.module.syntax')
+local util = require('mug.module.util')
 
 local HEADER, NAMESPACE = 'mug/index', 'MugIndex'
-local INPUT_TITLE, INPUT_WIDTH = 'Commit', 54
-local add_lines, reset_lines, force_lines = {}, {}, {}
+local INPUT_TITLE = 'Commit'
+local INPUT_WIDTH = 54
+local stat_lines, add_lines, reset_lines, force_lines = {}, {}, {}, {}
 local float_handle, input_handle = 0, 0
-local float_height = 2
+local item_count = 0
 local enable_ignored = false
 
 local ns_add = vim.api.nvim_create_namespace(NAMESPACE .. '_Add')
 local ns_force = vim.api.nvim_create_namespace(NAMESPACE .. '_Force')
 local ns_reset = vim.api.nvim_create_namespace(NAMESPACE .. '_Reset')
--- local ns_error = vim.api.nvim_create_namespace(NAMESPACE .. '_Error')
 
 ---@class Mug
 ---@field index_add_key string key to git add selection
@@ -30,6 +30,7 @@ _G.Mug._def('index_reset_key', 'r', true)
 _G.Mug._def('index_clear_key', 'c', true)
 _G.Mug._def('index_inputbar', '@', true)
 _G.Mug._def('index_commit', '`', true)
+_G.Mug._def('index_auto_update', false, true)
 
 hl.lazy_load(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
@@ -43,21 +44,58 @@ hl.store('MugIndexHeader', { link = 'String' })
 hl.store('MugIndexStage', { link = 'Statement' })
 hl.store('MugIndexUnstage', { link = 'ErrorMsg' })
 
----Get git index and status
----@param bang? boolean Add "--ignored" option
 ---@return boolean # Error occurred
 ---@return table # Git status result
-local function get_stats(bang)
-  local ignore = bang or enable_ignored
-  local result = branch.branch_stats(nil, false, ignore)
-  local err = result[1] == 'Not a git repository' or result[1] == 'fatal:'
-  float_height = #result
+local function get_stats()
+  local ignore = enable_ignored
+  local lines = branch.branch_stats(nil, false, ignore)
+  local err = lines[1] == 'Not a git repository' or lines[1] == 'fatal:'
+  item_count = #lines
 
-  for i, v in ipairs(result) do
-    result[i] = ' ' .. v
+  if item_count == 2 and lines[2] == '' then
+    err = true
+    lines[1] = 'No changes'
   end
 
-  return err, result
+  return err, lines
+end
+
+local function initial_idx()
+  local err, lines = get_stats()
+  local summary = vim.fn.systemlist(util.gitcmd({ cmd = 'diff', opts = { '--no-color', '--compact-summary', 'HEAD' } }))
+
+  if not err then
+    local len
+
+    for i, v in ipairs(lines) do
+      for _, s in ipairs(summary) do
+        if v ~= '' and s:find(v:sub(3), 1, true) then
+          len = #v:sub(3) + 1
+          stat_lines[v:sub(3)] = s:sub(len)
+          lines[i] = string.format(' %s%s', v:sub(1, 2), s)
+          goto continue
+        end
+      end
+
+      lines[i] = string.format(' %s', v)
+
+      ::continue::
+    end
+  end
+
+  return err, lines
+end
+
+local function update_idx()
+  local err, lines = get_stats()
+
+  if not err then
+    for i, v in ipairs(lines) do
+      lines[i] = string.format(' %s%s', v, stat_lines[v:sub(3)] or '')
+    end
+  end
+
+  return err, lines
 end
 
 ---@return boolean # Whether the index has changed
@@ -67,7 +105,6 @@ local function do_stage()
     { subcmd = 'add', force = '--force', ns = ns_force, selections = force_lines },
     { subcmd = 'reset', ns = ns_reset, selections = reset_lines },
   }
-
   local items, error_msg = {}, {}
   local skip = 0
 
@@ -81,7 +118,8 @@ local function do_stage()
           select.contents = select.contents:gsub('^.+->%s', '')
         end
 
-        table.insert(items, select.contents)
+        select = select.contents:gsub('^(%S+).+', '%1')
+        table.insert(items, select)
       end
 
       local cmdline = util.gitcmd({ noquotepath = true, cmd = v.subcmd, opts = { v.force, unpack(items) } })
@@ -103,24 +141,24 @@ local function do_stage()
   end
 
   if not vim.tbl_isempty(error_msg) then
-    extmark.warning(error_msg, vim.api.nvim_win_get_height(0))
+    extmark.warning(error_msg, 4, vim.api.nvim_win_get_height(0))
   end
 
-  return skip ~= 3 and true
+  return skip ~= 3
 end
 
 ---@param result? table Stdout of git status
 local function update_buffer(result)
   local buf_lines = vim.api.nvim_buf_line_count(0)
-  local err, lines = get_stats()
+  local err, lines = update_idx()
 
   if err then
     util.notify(lines, HEADER, 3, true)
     return
   end
 
-  if float_height ~= buf_lines then
-    vim.api.nvim_win_set_height(0, float_height)
+  if item_count ~= buf_lines then
+    vim.api.nvim_win_set_height(0, item_count)
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
   end
 
@@ -130,12 +168,23 @@ local function update_buffer(result)
 
   if result and vim.api.nvim_get_vvar('shell_error') ~= 0 then
     local height = vim.api.nvim_win_get_height(0)
-    extmark.warning(result, height)
+    extmark.warning(result, 4, height)
   end
 end
 
----@alias namespace string Specified namespace
----@alias ln number Specified line number
+local function auto_update()
+  vim.api.nvim_create_autocmd({'BufEnter', 'FocusGained'}, {
+    group = 'mug',
+    buffer = 0,
+    callback = function()
+      update_buffer()
+    end,
+    desc = 'MugIndex upload',
+  })
+end
+
+---@alias namespace string Specifies namespace
+---@alias ln number Specifies line number
 
 ---@param ns namespace
 ---@param row ln
@@ -160,7 +209,7 @@ end
 local function select_this(ns)
   local row = vim.api.nvim_win_get_cursor(0)[1]
 
-  if row == float_height then
+  if row == item_count then
     return nil
   end
 
@@ -184,7 +233,7 @@ local function add_this(direction)
   end
 
   if direction then
-    local row = direction == 1 and math.min(ln + 1, float_height) or math.max(ln - 1, 2)
+    local row = direction == 1 and math.min(ln + 1, item_count) or math.max(ln - 1, 2)
     local col = vim.api.nvim_win_get_cursor(0)[2]
 
     vim.api.nvim_win_set_cursor(0, { row, col })
@@ -212,15 +261,17 @@ local function input_commit_map()
   title = title:sub(2, #title - 1)
   local keyid = _G.Mug.commit_gpg_sign and '--gpg-sign=' .. _G.Mug.commit_gpg_sign or '--gpg-sign'
 
-  vim.keymap.set('i', '<C-o><C-s>', function()
+  map.buf_set(true, 'i', '<C-o><C-s>', function()
     sign = #sign == 0 and { keyid } or {}
     update_imputbar_title(title, keyid, sign, amend)
-  end, { buffer = true })
-  vim.keymap.set('i', '<C-o><C-a>', function()
+  end, 'Add commit options "--gpg-sign"')
+
+  map.buf_set(true, 'i', '<C-o><C-a>', function()
     amend = #amend == 0 and { '--amend' } or {}
     update_imputbar_title(title, keyid, sign, amend)
-  end, { buffer = true })
-  vim.keymap.set('i', '<CR>', function()
+  end, 'Add commit options "--amend"')
+
+  map.buf_set(true, 'i', '<CR>', function()
     local msg = vim.api.nvim_get_current_line()
 
     if msg == '' and #amend ~= 0 then
@@ -235,11 +286,12 @@ local function input_commit_map()
     local stdout = vim.fn.systemlist(cmdline)
 
     update_buffer(stdout)
-  end, { buffer = true })
+  end, 'Update index')
 end
 
 local function linewise_path()
-  local path = vim.api.nvim_get_current_line():sub(5)
+  local path = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
+  print(path)
   if not util.file_exist(path) then
     path = nil
   end
@@ -285,6 +337,11 @@ local function float_win_map()
     vim.api.nvim_command('wincmd p|edit ' .. path)
   end, 'Open file diff')
 
+  map.buf_set(true, 'n', '<F5>', function()
+    update_buffer()
+    extmark.warning({'Update index'}, 3, vim.api.nvim_win_get_height(0))
+  end, 'Update index')
+
   map.buf_set(true, 'n', _G.Mug.index_add_key, function()
     add_this()
   end, 'Add selection')
@@ -316,7 +373,7 @@ local function float_win_map()
     end
 
     if vim.api.nvim_buf_get_var(0, 'mug_branch_stats').s == 0 then
-      extmark.warning({ 'No stages' }, vim.api.nvim_win_get_height(0))
+      extmark.warning({ 'No stages' }, 4, vim.api.nvim_win_get_height(0))
       return
     end
 
@@ -347,8 +404,13 @@ end
 
 local function float_win_post()
   vim.api.nvim_buf_set_option(0, 'modifiable', false)
-  syntax_index()
+  syntax.index()
+  syntax.stats()
   float_win_map()
+
+  if _G.Mug.index_auto_update then
+    auto_update()
+  end
 end
 
 local function float_win(stdout)
@@ -365,8 +427,8 @@ local function float_win(stdout)
     end,
     post = float_win_post,
     leave = function()
-      add_lines, force_lines, reset_lines = {}, {}, {}
-      float_height, enable_ignored = 2, false
+      stat_lines, add_lines, force_lines, reset_lines = {}, {}, {}, {}
+      item_count, enable_ignored = 2, false
     end,
   }).handle
 
@@ -384,15 +446,10 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
   end
 
   enable_ignored = opts.bang
-  local err, stdout = get_stats(enable_ignored)
+  local err, stdout = initial_idx()
 
   if err then
     util.notify(stdout[1], HEADER, 3)
-    return
-  end
-
-  if #stdout == 2 and stdout[2]:match('^%s+$') then
-    util.notify('Index is clean', HEADER, 2)
     return
   end
 

@@ -1,6 +1,7 @@
 # ☕ mug.nvim
 
 mug(mixed utilities for git)は、neovim 上で git を操作するためのコマンド集です。  
+windows 版 neovim(非 wsl)をターゲットに作成しています。  
 いくつかの他作者様が作成された vim plugin の機能を内包します。
 
 ## 動作条件
@@ -233,7 +234,7 @@ require('mug').setup({
 - `amend` ステージされた変更を HEAD に追加します。
 - `empty` 空コミットを作成します。コミットメッセージには"empty commit(created by mug)"が設定されます。
 - ~~`fixup`~~ **Deleted**
-- `rebase` 現在使用するとエラーがでます。 fixupの代替。
+- `rebase` 現在使用するとエラーがでます。 fixup の代替。
 - `m <commit-message>` 直接コミットメッセージを入力できます。スペースを含む場合でも""で括る必要はありません。
 
 **:MugCommitSign[!] [\<sub-command>] [\<commit-message>]**
@@ -259,11 +260,11 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 コミット編集バッファは`git commit`で開かれたバッファではないため如何なる変更もリポジトリに影響を与えません。
 コミットの作成にはコマンドを使用します。
 
-- `:C`    commit
-- `:CA`   commit amend
-- `:CE`   commit empty
-- `:CS`   commit-sign
-- `:CSA`  commit-sign amend
+- `:C` commit
+- `:CA` commit amend
+- `:CE` commit empty
+- `:CS` commit-sign
+- `:CSA` commit-sign amend
 
 **variables**
 
@@ -447,6 +448,7 @@ require('mug').setup({
     index_clear_key = 'c',
     index_input_bar = '@',
     index_commit = '`',
+    index_auto_update = false,
   }
 })
 ```
@@ -467,6 +469,7 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 |  J, K   | 行を選択(Stage)後カーソル移動 |
 |   gf    | 行のパスを開く                |
 |   gd    | 行のパスを`MugDiff`           |
+|  \<F5>  | リストを更新                  |
 |    @    | コミットメッセージ入力バー    |
 | shift+@ | `MugCommit`を実行             |
 
@@ -496,6 +499,10 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 
 - index_commit `string`(上書き)  
   `MugCommit`の実行キーを指定します。
+
+- index_auto_update `boolean`(上書き)  
+  MugIndex のフロートウィンドウを離れてから、戻ったときに  
+  `git status`を実行しリストを更新します。
 
 **highlights**
 
