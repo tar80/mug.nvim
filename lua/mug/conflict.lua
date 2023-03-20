@@ -545,7 +545,7 @@ local function open_loclist(position)
 
   vim.api.nvim_command(tbl.positions[position] .. winsize .. 'lwindow|clearjumps')
   vim.api.nvim_buf_set_option(0, 'bufhidden', 'wipe')
-  vim.api.nvim_buf_set_name(0, 'Mug:/conflict')
+  vim.api.nvim_buf_set_name(0, 'Mug://conflict')
   hide_column(_G.Mug.loclist_disable_number)
   vim.api.nvim_set_var('mug_loclist_loaded', vim.api.nvim_get_current_win())
 

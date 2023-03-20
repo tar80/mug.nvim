@@ -130,7 +130,7 @@ local function create_commit(optspec, msgspec, commitmsg)
   local is_commit_buffer = vim.startswith(bufname, COMMIT_BUFFER_URI)
 
   if is_commit_buffer then
-    vim.api.nvim_command('write! ' .. editmsg)
+    vim.api.nvim_command('silent write! ' .. editmsg)
   end
 
   job.async(function()
