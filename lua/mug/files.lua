@@ -111,11 +111,13 @@ vim.api.nvim_create_user_command('MugFileRename', function(opts)
     return
   end
 
-  local ok, wd = util.has_repo(HEADER)
+  local ok = util.has_repo(HEADER)
 
   if not ok then
     return
   end
+
+  wd = util.dirpath('/')
 
   if not path_verify(wd, opts) then
     return
@@ -148,12 +150,13 @@ vim.api.nvim_create_user_command('MugFileMove', function(opts)
 end, { nargs = 1, bang = true, complete = 'dir' })
 
 vim.api.nvim_create_user_command('MugFileDelete', function(opts)
-  local ok, wd = util.has_repo(HEADER)
+  local ok = util.has_repo(HEADER)
 
   if not ok then
     return
   end
 
+  wd = util.dirpath('/')
   local name = vim.fn.expand('%:t')
 
   do_remove(wd, name, opts.bang)

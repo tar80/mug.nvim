@@ -32,6 +32,11 @@ end
 ---Run "git add" on current file
 ---@param force boolean Force stageing
 local function git_add(force)
+  if vim.api.nvim_buf_get_name(0) == '' then
+    util.notify('Cannot write. Buffer has no name', HEADER, 3)
+    return
+  end
+
   vim.api.nvim_command('silent update')
 
   if not vim.b.mug_branch_name then

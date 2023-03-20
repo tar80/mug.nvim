@@ -303,10 +303,11 @@ M.has_repo = function(header)
   local branch_name = vim.b.mug_branch_name
 
   if not branch_name or branch_name == _G.Mug.symbol_not_repository then
-    require('mug.workspace').set_workspace_root(path)
+    -- require('mug.workspace').set_workspace_root(path)
+    package.loaded['mug.workspace'].set_workspace_root(path)
   end
 
-  return true, path
+  return true, path:sub(1, -6)
 end
 
 ---@param header string Notification-header

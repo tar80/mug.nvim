@@ -1,8 +1,8 @@
-local util = require('mug.module.util')
 local comp = require('mug.module.comp')
-local tbl = require('mug.module.table')
-local map = require('mug.module.map')
 local job = require('mug.module.job')
+local map = require('mug.module.map')
+local tbl = require('mug.module.table')
+local util = require('mug.module.util')
 
 local HEADER = 'mug/diff'
 local DIFF_URI = 'mug://cat-file/'
@@ -10,11 +10,14 @@ local DIFF_URI = 'mug://cat-file/'
 ---@class Mug
 ---@field diff_position string Position of diff window
 
-local function on_attach()
-  map.buf_set(true, 'x', 'do', ':diffget<CR>', 'Get selection diff')
-  map.buf_set(true, 'x', 'dp', ':diffput<CR>', 'Put selection diff')
-  map.buf_set(true, 'x', 'dd', 'd', 'Delete selection range')
-  map.buf_set(true, { 'n', 'x' }, 'du', '<Cmd>diffupdate<CR>', 'Update diff comparison status')
+---@param ... string Buffer number
+local function on_attach(...)
+  for _, bufnr in ipairs({ ... }) do
+    map.buf_set(bufnr, 'x', 'do', ':diffget<CR>', 'Get selection diff')
+    map.buf_set(bufnr, 'x', 'dp', ':diffput<CR>', 'Put selection diff')
+    map.buf_set(bufnr, 'x', 'dd', 'd', 'Delete selection range')
+    map.buf_set(bufnr, { 'n', 'x' }, 'du', '<Cmd>diffupdate<CR>', 'Update diff comparison status')
+  end
 end
 
 ---@param bufnr number Buffer number
@@ -28,7 +31,7 @@ local function on_detach(bufnr, diffnr)
       local bufs = vim.api.nvim_list_bufs()
 
       for _, v in ipairs(bufs) do
-        if vim.api.nvim_buf_get_name(v):find(DIFF_URI, 1, true) then
+        if not v == diffnr and vim.api.nvim_buf_get_name(v):find(DIFF_URI, 1, true) then
           return
         end
       end
@@ -181,9 +184,8 @@ local function let_compare(name, ...)
     local bufnr = vim.api.nvim_get_current_buf()
     local handle = vim.api.nvim_get_current_win()
 
-    on_attach()
-
     vim.api.nvim_command('silent ' .. options.pos .. 'new ' .. filename)
+
     local diffnr = vim.api.nvim_get_current_buf()
 
     util.nofile(true, 'wipe')
@@ -192,6 +194,8 @@ local function let_compare(name, ...)
     vim.api.nvim_set_current_win(handle)
     vim.api.nvim_command('diffthis')
 
+    on_attach(bufnr)
+    on_attach(diffnr)
     on_detach(bufnr, diffnr)
   end)
 end
