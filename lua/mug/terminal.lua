@@ -90,7 +90,7 @@ local function create_window(count, pos)
   if count == 0 then
     count = ''
   else
-    count = (pos == 'top' or pos == 'bottom') and math.max(3, count) or math.max(20, count)
+    count = pos:find('vertical', 1, true) and math.max(20, count) or math.max(3, count)
   end
 
   vim.api.nvim_command('silent ' .. pos .. count .. 'new')
