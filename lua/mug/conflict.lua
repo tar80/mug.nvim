@@ -21,6 +21,7 @@ local winpos = 'zz'
 ---@field conflict_sep string String identified as the separator of the conflict
 ---@field conflict_end string String identified as the end of the conflict
 _G.Mug._def('loclist_position', 'left', true)
+_G.Mug._def('loclist_disable_number', false, true)
 _G.Mug._def('filewin_beacon', '@@', true)
 _G.Mug._def('filewin_indicate_position', 'center', true)
 _G.Mug._def('conflict_begin', '^<<<<<<< ', true)

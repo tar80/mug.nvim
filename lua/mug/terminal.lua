@@ -27,6 +27,11 @@ local discolumns = {
 ---@filed term_nvim_opener string Specifies the position when opening a buffer from MugTerm
 ---@field term_height number
 ---@field term_width number
+_G.Mug._def('term_shell', vim.api.nvim_get_option('shell'), true)
+_G.Mug._def('term_position', 'top', true)
+_G.Mug._def('term_disable_columns', false, true)
+_G.Mug._def('term_nvim_pseudo', false, true)
+_G.Mug._def('term_nvim_opener', 'tabnew', true)
 _G.Mug._def('term_height', 1, true)
 _G.Mug._def('term_width', 0.9, true)
 

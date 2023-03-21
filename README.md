@@ -300,7 +300,7 @@ require('mug').setup({
   conflict = true,
   variables = {
     loclist_position = 'left',
-    loclist_disable_number = ,
+    loclist_disable_number = false,
     filewin_beacon = '@@',
     filewin_indicate_position = 'center',
     conflict_begin = '^<<<<<<< ',
@@ -341,7 +341,7 @@ MugConflict はロケーションリストにキーを設定します。
 **variables**
 
 - loclist_position `string`(上書き)  
-  ロケーションリストの表示位置を指定します。`top` `bottom` `lef` `right`を指定します。
+  ロケーションリストの表示位置を指定します。`top` `bottom` `left` `right`を指定します。
 
 - loclist_disable_number `boolean`(上書き)  
   ロケーションリストの行番号を非表示にするなら`true`を指定します。
@@ -630,11 +630,11 @@ require('mug').setup({
     term_command = 'MugTerm',
     term_height = 1,
     term_width = 0.9,
-    term_shell = nil,
-    term_position = nil,
-    term_disable_columns = nil,
-    term_nvim_pseudo = nil,
-    term_nvim_opener = nil,
+    term_shell = vim.o.shell,
+    term_position = 'top',
+    term_disable_columns = false,
+    term_nvim_pseudo = false,
+    term_nvim_opener = 'tabnew',
     }
   }
 })
@@ -727,7 +727,7 @@ neovim をネストさせない機能があります。
       filewin_beacon = '@@',
       filewin_indicate_position = 'center',
       loclist_position = 'left',
-      loclist_disable_number = nil,
+      loclist_disable_number = false,
 
       -- Diff
       diff_position = nil,
@@ -751,11 +751,11 @@ neovim をネストさせない機能があります。
       term_command = 'MugTerm',
       term_height = 1, -- floating window
       term_width = 0.9, -- floating window
-      term_shell = nil,
-      term_position = nil, -- normal window
-      term_disable_columns = nil,
-      term_nvim_pseudo = nil,
-      term_nvim_opener = nil,
+      term_shell = vim.o.shell,
+      term_position = 'top', -- normal window
+      term_disable_columns = false,
+      term_nvim_pseudo = false,
+      term_nvim_opener = 'tabnew',
 
       -- Patch
       -- git diffの差分を表示する窓

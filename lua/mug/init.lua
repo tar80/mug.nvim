@@ -33,7 +33,7 @@ end
 ---@param force boolean Force stageing
 local function git_add(force)
   if vim.api.nvim_buf_get_name(0) == '' then
-    util.notify('Cannot write. Buffer has no name', HEADER, 3)
+    util.notify('Specified anonymous file', HEADER, 3)
     return
   end
 
