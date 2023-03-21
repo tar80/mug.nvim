@@ -48,7 +48,7 @@ end
 M.stats = function()
   vim.api.nvim_command([[
       syntax match diffRemoved "-\+$" display
-      syntax match diffAdded "+\+\(-\+\)\?$" contains=diffRemoved keepend
+      syntax match diffChanged "+\+\(-\+\)\?$" contains=diffRemoved keepend
       syntax match Comment "\s|\s" display
       syntax match Special "(new)" display
     ]])

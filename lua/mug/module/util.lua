@@ -293,6 +293,11 @@ end
 ---@return boolean # In git-repository
 ---@return string # Git-repository root path
 M.has_repo = function(header)
+  if vim.bo.buftype ~= '' then
+    M.notify('Can not run in special buffer', header, 3)
+    return false, ''
+  end
+
   local path = vim.fs.find('.git', { type = 'directory', upward = true })[1]
 
   if not path then
@@ -303,8 +308,7 @@ M.has_repo = function(header)
   local branch_name = vim.b.mug_branch_name
 
   if not branch_name or branch_name == _G.Mug.symbol_not_repository then
-    -- require('mug.workspace').set_workspace_root(path)
-    package.loaded['mug.workspace'].set_workspace_root(path)
+    package.loaded['mug.workspace'].set_workspace_root(false)
   end
 
   return true, path:sub(1, -6)

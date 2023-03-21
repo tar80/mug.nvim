@@ -147,13 +147,23 @@ local function do_stage()
   return skip ~= 3
 end
 
+local function modify_buffer(range, contents)
+  vim.api.nvim_buf_set_option(0, 'modifiable', true)
+  vim.api.nvim_buf_set_text(0, 0, 0, range - 1, 0, contents)
+  vim.api.nvim_buf_set_option(0, 'modifiable', false)
+end
+
 ---@param result? table Stdout of git status
 local function update_buffer(result)
   local buf_lines = vim.api.nvim_buf_line_count(0)
   local err, lines = update_idx()
 
   if err then
-    util.notify(lines, HEADER, 3, true)
+    if vim.bo.buftype == 'nofile' then
+      modify_buffer(buf_lines, lines)
+    else
+      util.notify(lines, HEADER, 3, true)
+    end
     return
   end
 
@@ -162,9 +172,7 @@ local function update_buffer(result)
     vim.api.nvim_win_set_cursor(0, { 1, 0 })
   end
 
-  vim.api.nvim_buf_set_option(0, 'modifiable', true)
-  vim.api.nvim_buf_set_text(0, 0, 0, buf_lines - 1, 0, lines)
-  vim.api.nvim_buf_set_option(0, 'modifiable', false)
+  modify_buffer(buf_lines, lines)
 
   if result and vim.api.nvim_get_vvar('shell_error') ~= 0 then
     local height = vim.api.nvim_win_get_height(0)
@@ -173,7 +181,7 @@ local function update_buffer(result)
 end
 
 local function auto_update()
-  vim.api.nvim_create_autocmd({'BufEnter', 'FocusGained'}, {
+  vim.api.nvim_create_autocmd({ 'BufEnter', 'FocusGained' }, {
     group = 'mug',
     buffer = 0,
     callback = function()
@@ -291,7 +299,6 @@ end
 
 local function linewise_path()
   local path = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
-  print(path)
   if not util.file_exist(path) then
     path = nil
   end
@@ -339,7 +346,7 @@ local function float_win_map()
 
   map.buf_set(true, 'n', '<F5>', function()
     update_buffer()
-    extmark.warning({'Update index'}, 3, vim.api.nvim_win_get_height(0))
+    extmark.warning({ 'Update index' }, 3, vim.api.nvim_win_get_height(0))
   end, 'Update index')
 
   map.buf_set(true, 'n', _G.Mug.index_add_key, function()
