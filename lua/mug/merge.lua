@@ -37,8 +37,10 @@ local function do_merge(ff, pwd, command)
 
     if #stdout == 0 and err == 2 then
       if vim.tbl_contains(command, '--abort') then
-        if util.interactive('Aborted. Reload current buffer?', HEADER, 'n') then
-          vim.api.nvim_command('edit! %')
+        local filepath = util.filepath()
+
+        if filepath and util.interactive('Aborted. Reload current buffer?', HEADER, 'n') then
+          vim.api.nvim_command('edit! ' .. filepath)
         end
 
         return

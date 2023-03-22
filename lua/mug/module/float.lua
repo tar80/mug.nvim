@@ -336,6 +336,14 @@ M.open = function(tbl)
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave)
 
+  --[[
+  -- NOTE: Buffer information is displayed when a floating-window is started,
+  -- but it is useless and I want to hide it. In addition,
+  -- messages can be skipped if the window is set to insert mode,
+  -- but this is not adopted because it increases unnecessary processing.
+  --]]
+  print(' ')
+
   return buf
 end
 
@@ -344,7 +352,7 @@ end
 M.term = function(tbl)
   local cmd = tbl.cmd or ''
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.cmd)
-  namespace = 'term'
+  namespace = 'MugTerm'
 
   if not win then
     return { bufnr = nil, handle = nil }
@@ -353,7 +361,7 @@ M.term = function(tbl)
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
   win = nil
 
-  util.termopen(cmd, true)
+  util.termopen(cmd)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave, true)

@@ -1,5 +1,5 @@
 ---@class util
----@field conv_slash function Change backslash to slash
+---@field conv_slash fun(item: string) : string Change backslash to slash
 ---@field slash function Returns currently path separator
 ---@field normalize function Normalize path using crrently path separator
 ---@field pwd function Returns current working directory
@@ -60,13 +60,13 @@ M.pwd = function()
 end
 
 ---@param sep string? Path separator
----@return string # Fullpath of current file
-M.filepath = function(sep)
+---@param response? boolean Display notification
+---@return string|nil # Fullpath of current file
+M.filepath = function(sep, response)
   local path = vim.api.nvim_buf_get_name(0)
 
   if path == '' then
-    M.notify('File not found', 'mug', 4)
-    return ''
+    return response and M.notify('File not found', 'mug', 4) or nil
   end
 
   return sep and M.normalize(path, sep) or path

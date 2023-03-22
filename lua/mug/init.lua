@@ -32,8 +32,9 @@ end
 ---Run "git add" on current file
 ---@param force boolean Force stageing
 local function git_add(force)
-  if vim.api.nvim_buf_get_name(0) == '' then
-    util.notify('Specified anonymous file', HEADER, 3)
+  local path = util.filepath('/', true)
+
+  if not path then
     return
   end
 
@@ -54,7 +55,6 @@ local function git_add(force)
 
   job.async(function()
     local option = force and '-fv' or '-v'
-    local path = util.filepath('/')
     local cmd = util.gitcmd({ cmd = 'add', opts = { option, path } })
     local result, err = job.await(cmd)
 
@@ -68,10 +68,6 @@ local function git_add(force)
 end
 
 local function mug_variables(options)
-  _G.Mug._def('edit_command', 'Edit', true)
-  _G.Mug._def('file_command', 'File', true)
-  _G.Mug._def('write_command', 'Write', true)
-
   if options.show then
     _G.Mug._def('show_command', 'MugShow', true)
   end
@@ -165,7 +161,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter' }, {
     ---Delay to accommodate user set buftype
     local timer = vim.loop.new_timer()
     timer:start(
-      1,
+      100,
       0,
       vim.schedule_wrap(function()
         set_ws_root(false)
@@ -198,7 +194,7 @@ function M.setup(options)
   mug_commands()
   mug_highlights(options)
 
-  if not (vim.b.mug_branch_name or vim.g[FINDROOT_DISABLED] or vim.b[FINDROOT_DISABLED])  then
+  if not (vim.b.mug_branch_name or vim.g[FINDROOT_DISABLED] or vim.b[FINDROOT_DISABLED]) then
     vim.api.nvim_command('doautocmd mug BufEnter')
   end
 

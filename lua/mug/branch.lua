@@ -26,6 +26,21 @@ local function branch_cache_key(root)
   return vim.fn.getftime(root .. '/.git/HEAD') + vim.fn.getftime(root .. '/.git/MERGE_HEAD')
 end
 
+local function file_read(filepath)
+  local handle = io.open(filepath, 'r')
+  local contents = {}
+
+  if handle ~= nil then
+    for l in handle:lines() do
+      table.insert(contents, l)
+    end
+
+    io.close(handle)
+  end
+
+  return contents
+end
+
 ---The branch name that the head points to
 ---@param root string Project root path
 ---@param filepath string Filepath used to get branch name
@@ -34,19 +49,23 @@ end
 ---@return string # Branch state
 local function branch_head(root, filepath, state)
   local branch_name = '(unknown)'
-  local line = io.lines(filepath)()
+  local lines = file_read(filepath)
 
-  if line ~= nil then
-    branch_name = line:match('refs/heads/(.+)')
+  if #lines > 0 then
+    branch_name = lines[1]:match('refs/heads/(.+)')
 
     if branch_name == nil then
       branch_name = '(unknown)'
+      local logs_head = string.format('%s/logs/HEAD', root)
 
-      for l in io.lines(root .. '/logs/HEAD') do
-        if l:find('checkout: moving from', 1, true) ~= nil then
-          branch_name = l:match('to%s([^%s]+)')
-          state = 'Detached'
-          break
+      if util.file_exist(logs_head) then
+        lines = file_read(logs_head)
+
+        for i = #lines, 1, -1 do
+          if lines[i]:find('checkout: moving from', 1, true) ~= nil then
+            branch_name = lines[i]:match('to%s([^%s]+)')
+            state = 'Detached'
+          end
         end
       end
     end

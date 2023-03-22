@@ -77,21 +77,22 @@ local function do_mkrepo(root, compared, contain)
 end
 
 vim.api.nvim_create_user_command('MugMkrepo', function(opts)
-  local ok, pwd = util.has_repo(HEADER)
+  local root = util.dirpath('/')
+  local repo_root = root
+  local path = opts.args
 
-  if not ok then
-    return
+  if path:find('./', 1, true) then
+    path = vim.fn.fnamemodify(string.format('%s/%s', root, opts.args:gsub('^/', '')), ':p')
   end
 
-  local repo_root = pwd
-  local pathspec = util.conv_slash(opts.args):gsub('/$', '')
+  local pathspec = util.normalize(path, '/'):gsub('/$', '')
 
   if pathspec ~= '' then
-    repo_root = pathspec:find('/', 1, true) and pathspec or pwd .. '/' .. pathspec
+    repo_root = pathspec:find('/', 1, true) and pathspec or root .. '/' .. pathspec
   end
 
-  local compared = pwd == repo_root and 'same' or 'differ'
-  pwd, pathspec = nil, nil
+  local compared = root == repo_root and 'same' or 'differ'
+  root, pathspec = nil, nil
 
   if vim.fn.isdirectory(repo_root .. '/.git') ~= 0 then
     return util.notify('Already exist', HEADER, 3)
