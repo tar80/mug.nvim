@@ -118,7 +118,7 @@ local function do_stage()
           select.contents = select.contents:gsub('^.+->%s', '')
         end
 
-        select = select.contents:gsub('^(%S+).+', '%1')
+        select = select.contents:gsub('^(%S+).*', '%1')
         table.insert(items, select)
       end
 

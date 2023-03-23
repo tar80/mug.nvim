@@ -23,6 +23,12 @@ end
 ---@param bufnr number Buffer number
 ---@param diffnr number Diff buffer number
 local function on_detach(bufnr, diffnr)
+  local exist = vim.api.nvim_get_autocmds({ group = 'mug', event = 'BufWipeout', buffer = diffnr })
+
+  if not vim.tbl_isempty(exist) then
+    return
+  end
+
   vim.api.nvim_create_autocmd({ 'BufWipeout' }, {
     group = 'mug',
     once = true,
@@ -31,7 +37,7 @@ local function on_detach(bufnr, diffnr)
       local bufs = vim.api.nvim_list_bufs()
 
       for _, v in ipairs(bufs) do
-        if not v == diffnr and vim.api.nvim_buf_get_name(v):find(DIFF_URI, 1, true) then
+        if not (v == diffnr) and vim.api.nvim_buf_get_name(v):find(DIFF_URI, 1, true) then
           return
         end
       end
