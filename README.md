@@ -234,7 +234,9 @@ require('mug').setup({
 - `amend` ステージされた変更を HEAD に追加します。
 - `empty` 空コミットを作成します。コミットメッセージには"empty commit(created by mug)"が設定されます。
 - ~~`fixup`~~ **Deleted**
-- `rebase` 現在使用するとエラーがでます。 fixup の代替。
+- `rebase` fixup の代替です。フローティングウィンドウが起動し、`git log`の結果が出力されます。  
+  カーソル行のコミットに対して`f`キーで fixup、`s`キーで squash を設定し、起点になるコミットにカーソルを合わせ、
+  `<CR>`で実行します。`c`キーで選択をクリアできます。
 - `m <commit-message>` 直接コミットメッセージを入力できます。スペースを含む場合でも""で括る必要はありません。
 
 **:MugCommitSign[!] [\<sub-command>] [\<commit-message>]**
@@ -492,7 +494,7 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
   行選択(Reset)に使用するキーを指定します。
 
 - index_clear_key `string`(上書き)  
-  選択状態をクリアするキーを指定します。
+  行選択を解除するキーを指定します。
 
 - index_input_bar `string`(上書き)  
   コミット入力バーの呼び出しキーを指定します。
@@ -577,6 +579,77 @@ require('mug').setup({
   初期化コミットに使用されるメッセージを指定します。
 
 [mkrepo.webm](https://user-images.githubusercontent.com/45842304/219909055-10a63d23-597e-4008-a427-d67c226628c8.webm)
+
+</details>
+<details>
+<summary>MugRebase</summary>
+
+```lua:
+require('mug').setup({
+  rebase = true,
+  variables = {
+    rebase_log_format = '%as <%cn> %d%s',
+    rebase_fixup_key = 'f',
+    rebase_squash_key = 's',
+    rebase_clear_key = 'c',
+    rebase_preview_pos = 'bottom',
+    rebase_preview_subpos = 'right',
+  }
+})
+```
+
+**:MugRebase[!] \<branchname> [\<options>]**
+
+フローティングウィンドウに出力した`git log`の結果から起点になるコミットを選択し、  
+環境変数`GIT_SEQUENCE_EDITOR`を介して RPC 経由で`git rebase`を実行し、リベース TODO バッファを開きます。  
+`!`を付けるとオプション`--autostash`が付加します。
+
+**:MugRebaseSign[!] \<branchname> [\<options>]**
+
+オプション`--gpg-sign`を付加します。使用する署名を指定する場合は、variables に`commit_gpg_sign`を設定します。
+
+**リベース TODO バッファ**
+
+filetype`gitrebase`で使用できるキーと、以下のキーが有効です。
+
+| モード |      キー       | 説明                                    |
+| :----: | :-------------: | :-------------------------------------- |
+|   n    |        ^        | 連動ビューをトグル                      |
+|   n    |       j,k       | 連動ビュー有効時、差分バッファ連動      |
+|   n    |       gd        | 差分バッファを水平方向にトグル          |
+|   n    |       gD        | 差分バッファを縦方向にトグル            |
+|   n    | q(差分バッファ) | 差分バッファ閉じる(キャッシュ削除)      |
+|   n    | \<C-u>, \<C-d>  | 差分バッファのカーソルを 1/2 ページ移動 |
+|   n    | \<C-j>, \<C-k>  | 差分バッファのカーソルを 1 行移動       |
+
+**variables**
+
+- rebase\_log\_format `string`(上書き)  
+  フローティングウィンドウに表示される`git log`の書式を指定します。
+
+- rebase\_fixup\_key `string`(上書き)  
+  `MugCommit rebase`で行選択(Fixup)に使用するキーを指定します。
+
+- rebase\_squash\_key' `string`(上書き)  
+  `MugCommit rebase`で行選択(Squash)に使用するキーを指定します。
+
+- rebase\_clear\_key `string`(上書き)  
+  `MugCommit rebase`で行選択を解除するキーを指定します。
+
+- rebase\_preview\_pos `string`(上書き)  
+  リベースTODOバッファ上で`gd`を実行したときに差分バッファを開く位置を指定します。
+
+- rebase\_preview\_subpos' `string`(上書き)  
+  リベースTODOバッファ上で`gD`を実行したときに差分バッファを開く位置を指定します。
+
+**highlights**
+
+- MugRebaseFixup `NormalFloat`または`Normal`をベースにした緑っぽい色
+- MugRebaseSquash `NormalFloat`または`Normal`をベースにした青っぽい色
+- MugLogHash `Special`
+- MugLogDate `Statement`
+- MugLogOwner `Conditional`
+- MugLogHead `Keyword`
 
 </details>
 <details>
@@ -791,7 +864,7 @@ neovim をネストさせない機能があります。
 
 ## TODO
 
-- [x] rebase もうすぐ完成
+- [x] rebase 暫定的に追加
 - [x] ハイライトの設定を追加
 - [ ] log を追加したい
 - [ ] テスト そのうち

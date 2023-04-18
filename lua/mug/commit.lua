@@ -4,7 +4,7 @@ local job = require('mug.module.job')
 local comp = require('mug.module.comp')
 local branch = require('mug.branch')
 local patch = require('mug.patch')
--- local rebase = require('mug.rebase')
+local rebase = require('mug.rebase')
 
 ---@class commit
 ---@field commit_buffer function Open unique commit-edit buffer
