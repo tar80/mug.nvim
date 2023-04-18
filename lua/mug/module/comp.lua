@@ -1,13 +1,12 @@
 local util = require('mug.module.util')
 
 ---@class comp
----@field filter function
----@field branches function
----@field files function
+---@field filter function Narrow down the target from completion candidates
+---@field branches function Extract branch names
+---@field files function Extract the path under the specified directory
 ---@field commit_prefix function
 local M = {}
 
----Narrow down the target from completion candidates
 ---@param a string Arglead
 ---@param l string Cmdline
 ---@param list table Complition list
@@ -28,7 +27,6 @@ M.filter = function(a, l, list)
   return candidates
 end
 
----Extract branch names
 ---@return table # Branch names
 M.branches = function()
   local parent = util.pwd() .. '/.git/refs/heads'
@@ -46,7 +44,6 @@ M.branches = function()
   return branches
 end
 
----Extract the path under the specified directory
 ---@param dir string Specified directory path
 ---@return table # Paths under the specified directory
 M.files = function(dir)

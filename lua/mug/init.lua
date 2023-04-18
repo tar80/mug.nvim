@@ -30,7 +30,7 @@ do
 end
 
 ---Run "git add" on current file
----@param force boolean Force stageing
+---@param force boolean Force staging
 local function git_add(force)
   local path = util.filepath('/', true)
 
