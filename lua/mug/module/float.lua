@@ -182,22 +182,31 @@ setmetatable(Float, {
 })
 
 local function float_win_cmd_and_map()
-  vim.api.nvim_buf_create_user_command(0, 'MMMugFloatMove', function(opts)
+  local function float_move(key)
+    local count = vim.v.count
     local direction = {
-      h = { row = -1, col = -2 - opts.count },
-      j = { row = 0 + opts.count, col = -1 },
-      k = { row = -2 - opts.count, col = -1 },
-      l = { row = -1, col = 0 + opts.count },
+      h = { row = -1, col = -2 - count },
+      j = { row = 0 + count, col = -1 },
+      k = { row = -2 - count, col = -1 },
+      l = { row = -1, col = 0 + count },
     }
 
-    local d = direction[opts.args]
+    local d = direction[key]
     vim.api.nvim_win_set_config(0, { relative = 'win', row = d.row, col = d.col })
-  end, { count = true, nargs = 1 })
+  end
 
-  map.buf_set(true, 'n', '<M-h>', ':MMMugFloatMove h<CR>', 'Float shift left')
-  map.buf_set(true, 'n', '<M-j>', ':MMMugFloatMove j<CR>', 'Float shift right')
-  map.buf_set(true, 'n', '<M-k>', ':MMMugFloatMove k<CR>', 'Float shift down')
-  map.buf_set(true, 'n', '<M-l>', ':MMMugFloatMove l<CR>', 'Float shift up')
+  map.buf_set(true, 'n', '<M-h>', function ()
+    float_move('h')
+  end, 'Float shift left')
+  map.buf_set(true, 'n', '<M-j>', function ()
+    float_move('j')
+  end, 'Float shift right')
+  map.buf_set(true, 'n', '<M-k>', function ()
+    float_move('k')
+  end, 'Float shift down')
+  map.buf_set(true, 'n', '<M-l>', function ()
+    float_move('l')
+  end, 'Float shift up')
   map.ref_maps()
   map.quit_key()
 end
