@@ -74,7 +74,7 @@ MugFloat のフォーカスに割り当てられます。
 - float_winblend `integer`(上書き)  
   背景の疑似透過性を指定します。
 
-[float.webm](https://user-images.githubusercontent.com/45842304/218292617-887a15b2-39dd-41c3-8ca0-fc913868c0b5.webm)
+[float.mp4](https://github.com/tar80/mug.nvim/assets/45842304/a8867a19-08d5-4560-b815-aceb7b5f8bb6)
 
 </details>
 
@@ -291,7 +291,7 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 - patch_window_height `integer`(上書き)
   差分バッファの高さを指定します。
 
-[commit.webm](https://user-images.githubusercontent.com/45842304/222901039-977a589f-6d05-4dc1-9fdf-7af001c971e5.webm)
+[commit.mp4](https://github.com/tar80/mug.nvim/assets/45842304/3f9fc79e-8a27-48cf-bc98-3648d04cead2)
 
 </details>
 <details>
@@ -364,7 +364,7 @@ MugConflict はロケーションリストにキーを設定します。
 - MugConflictBoth `Normal`をベースに赤と緑を強調した色
 - MugConflictBeacon `Search`
 
-[conflict.webm](https://user-images.githubusercontent.com/45842304/222901105-84ba9c08-9f06-4bd9-ab33-701f8df9c4ac.webm)
+[conflict.mp4](https://github.com/tar80/mug.nvim/assets/45842304/b54392d4-3bb3-4621-b76e-4725acf07607)
 
 </details>
 <details>
@@ -513,7 +513,7 @@ MugIndex ウインドウには独自のキーマップが割り当てられま�
 - MugIndexUnstage `ErrorMsg`
 - MugIndexWarning `ErrorMsg`
 
-[index.webm](https://user-images.githubusercontent.com/45842304/222901145-ee3044e0-3206-4936-8130-e319d84ac95d.webm)
+[index.mp4](https://github.com/tar80/mug.nvim/assets/45842304/d6c9e1e1-6266-43ca-b973-ec417f04fa45)
 
 </details>
 <details>
@@ -545,7 +545,7 @@ require('mug').setup({
 `git fetch . <current-branch>:<branchname>`を実行します。コンフリクト発生時はエラーを返します。  
 [!]を付けると、`--force`が付加されます。
 
-[merge.webm](https://user-images.githubusercontent.com/45842304/222901247-1a4937b7-a54c-405c-9d33-7eb9cb1734c9.webm)
+[merge.mp4](https://github.com/tar80/mug.nvim/assets/45842304/478bbc44-c295-4935-9b68-5b5ef7e5033b)
 
 </details>
 <details>
@@ -578,7 +578,7 @@ require('mug').setup({
 - commit_initial_message `string`(上書き)  
   初期化コミットに使用されるメッセージを指定します。
 
-[mkrepo.webm](https://user-images.githubusercontent.com/45842304/219909055-10a63d23-597e-4008-a427-d67c226628c8.webm)
+[mkrepo.mp4](https://github.com/tar80/mug.nvim/assets/45842304/6c84c540-5593-4339-8caf-3d9f5565f83e)
 
 </details>
 <details>
@@ -602,7 +602,7 @@ require('mug').setup({
 
 フローティングウィンドウに出力した`git log`の結果から起点になるコミットを選択し、  
 環境変数`GIT_SEQUENCE_EDITOR`を介して RPC 経由で`git rebase`を実行し、リベース TODO バッファを開きます。  
-`!`を付けるとオプション`--autostash`が付加します。
+`!`を付けるとオプション`--autostash`を付加します。
 
 **:MugRebaseSign[!] \<branchname> [\<options>]**
 
@@ -612,35 +612,35 @@ require('mug').setup({
 
 filetype`gitrebase`で使用できるキーと、以下のキーが有効です。
 
-| モード |      キー       | 説明                                    |
-| :----: | :-------------: | :-------------------------------------- |
-|   n    |        ^        | 連動ビューをトグル                      |
-|   n    |       j,k       | 連動ビュー有効時、差分バッファ連動      |
-|   n    |       gd        | 差分バッファを水平方向にトグル          |
-|   n    |       gD        | 差分バッファを縦方向にトグル            |
-|   n    | q(差分バッファ) | 差分バッファ閉じる(キャッシュ削除)      |
-|   n    | \<C-u>, \<C-d>  | 差分バッファのカーソルを 1/2 ページ移動 |
-|   n    | \<C-j>, \<C-k>  | 差分バッファのカーソルを 1 行移動       |
+| モード |      キー      | 説明                                    |
+| :----: | :------------: | :-------------------------------------- |
+|   n    |       ^        | 連動ビューをトグル                      |
+|   n    |      j,k       | 連動ビュー有効時、差分バッファ連動      |
+|   n    |       gd       | 差分バッファを水平方向にトグル          |
+|   n    |       gD       | 差分バッファを縦方向にトグル            |
+|   n    |       q        | 差分バッファ閉じる                      |
+|   n    | \<C-u>, \<C-d> | 差分バッファのカーソルを 1/2 ページ移動 |
+|   n    | \<C-j>, \<C-k> | 差分バッファのカーソルを 1 行移動       |
 
 **variables**
 
-- rebase\_log\_format `string`(上書き)  
+- rebase_log_format `string`(上書き)  
   フローティングウィンドウに表示される`git log`の書式を指定します。
 
-- rebase\_fixup\_key `string`(上書き)  
+- rebase_fixup_key `string`(上書き)  
   `MugCommit rebase`で行選択(Fixup)に使用するキーを指定します。
 
-- rebase\_squash\_key' `string`(上書き)  
+- rebase_squash_key' `string`(上書き)  
   `MugCommit rebase`で行選択(Squash)に使用するキーを指定します。
 
-- rebase\_clear\_key `string`(上書き)  
+- rebase_clear_key `string`(上書き)  
   `MugCommit rebase`で行選択を解除するキーを指定します。
 
-- rebase\_preview\_pos `string`(上書き)  
-  リベースTODOバッファ上で`gd`を実行したときに差分バッファを開く位置を指定します。
+- rebase_preview_pos `string`(上書き)  
+  リベース TODO バッファ上で`gd`を実行したときに差分バッファを開く位置を指定します。
 
-- rebase\_preview\_subpos' `string`(上書き)  
-  リベースTODOバッファ上で`gD`を実行したときに差分バッファを開く位置を指定します。
+- rebase_preview_subpos' `string`(上書き)  
+  リベース TODO バッファ上で`gD`を実行したときに差分バッファを開く位置を指定します。
 
 **highlights**
 
@@ -688,7 +688,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
 - show_command `string`(上書き)  
   コマンド`MugShow`を別名で登録します。
 
-[show.webm](https://user-images.githubusercontent.com/45842304/222901228-1674129e-630b-40cc-b1b6-31964a560594.webm)
+[show.mp4](https://github.com/tar80/mug.nvim/assets/45842304/66610ce5-ffa2-4bc0-beed-9afb28ec7823)
 
 </details>
 
@@ -854,10 +854,12 @@ neovim をネストさせない機能があります。
       MugIndexReset = { bg = Normalをベースに赤を強調した色 },
 
       -- Rebase
-      -- MugLogHash = { link = 'Special' },
-      -- MugLogDate = { link = 'Statement' },
-      -- MugLogOwner = { link = 'Conditional' },
-      -- MugLogHead = { link = 'Keyword' },
+      MugRebaseFixup = { bg = Normalをベースに緑を強調した色 },
+      MugRebaseSquash = { bg = Normalをベースに青を強調した色 },
+      MugLogHash = { link = 'Special' },
+      MugLogDate = { link = 'Statement' },
+      MugLogOwner = { link = 'Conditional' },
+      MugLogHead = { link = 'Keyword' },
     },
   })
 ```
