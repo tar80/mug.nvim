@@ -9,7 +9,7 @@ M.general = function()
     syntax match Delimiter "=" contained
     syntax match Delimiter ","
     syntax region String start='"' end='"' keepend
-    syntax region String start="'" end="'" keepend
+    syntax region String start='`' end='`' keepend
     syntax keyword Boolean true false
   ]])
   vim.api.nvim_command([[syntax region Comment start="^\s\+--[- ][^ ]" end="$"]])
@@ -26,7 +26,7 @@ end
 
 M.log = function()
   vim.api.nvim_command([[
-    syntax match MugLogHash "^\s\?\w\{7}" display
+    syntax match MugLogHash "^\s\?\w\{7,8}" display
     syntax match MugLogHash "^\scommit\s\w\+$" display
     syntax match MugLogDate "\d\{4}-\d\d-\d\d" display
     syntax match MugLogDate "\sAuthor:\s.\+$" display
