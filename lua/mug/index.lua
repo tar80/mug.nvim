@@ -298,7 +298,10 @@ local function input_commit_map()
 end
 
 local function linewise_path()
-  local path = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
+  local root = vim.fs.find('.git', { type = 'directory', upward = true })[1]
+  local relative = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
+  ---@type string|nil
+  local path = string.format('%s%s', root:gsub('.git', '') , relative)
   if not util.file_exist(path) then
     path = nil
   end

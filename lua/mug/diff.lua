@@ -107,7 +107,15 @@ end
 ---@return boolean # The comparison target is the same file
 local function adjust_path(path)
   local cwd = util.pwd()
+  local root = vim.fs.find('.git', { type = 'directory', upward = true })[1]
+  root = root:gsub('/.git', '')
   local current_file = util.filepath('/')
+  local compensate = ''
+
+  if cwd ~= root then
+    compensate = string.format('%s/', cwd:sub(#root + 2))
+  end
+
   path = vim.fn.expand(path)
 
   if vim.fn.getftype(path) == 'link' then
@@ -117,7 +125,7 @@ local function adjust_path(path)
   end
 
   path = util.conv_slash(path)
-  path = path:find(cwd, 1, true) and path:sub(#cwd + 2) or path
+  path = path:find(root, 1, true) and path:sub(#root + 2) or string.format('%s%s', compensate, path)
   local is_same = path == current_file
 
   return path, is_same

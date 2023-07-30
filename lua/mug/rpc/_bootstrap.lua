@@ -39,3 +39,4 @@ vim.rpcrequest(server_ch, 'nvim_command', cmdline)
 --   end,
 --   desc = 'Close rpc-buffer',
 -- })
+
