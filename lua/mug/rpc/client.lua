@@ -39,7 +39,7 @@ M.open_buffer = function(filepath, client)
         return
       end
 
-      vim.env.NVIM_LISSTEN_ADRESS = nil
+      vim.env.NVIM_MUG_SERVER = nil
       pcall(vim.rpcrequest, client_ch, 'nvim_command', 'qall')
     end,
     desc = 'Close rpc-client',

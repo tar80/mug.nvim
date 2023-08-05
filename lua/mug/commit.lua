@@ -300,7 +300,7 @@ local function mug_commit(name)
         return
       end
 
-      rebase.rebase_i(name, vim.b.mug_branch_stats, true, {})
+      rebase.rebase_i(name, vim.b.mug_branch_stats, true, { 'HEAD' })
       return
     end
 

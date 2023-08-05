@@ -77,7 +77,7 @@ end
 local function open_preview(direction)
   direction = direction or _G.Mug.rebase_preview_pos
 
-  local hash, ok = vim.api.nvim_get_current_line():gsub('^%a+%s(%w%w%w%w%w%w%w)%s.*', '%1')
+  local hash, ok = vim.api.nvim_get_current_line():gsub('^%a+%s(%w+)%s.*', '%1')
 
   if ok == 1 then
     patch.open(direction, hash)
@@ -119,7 +119,7 @@ local function map_to_server()
     end, 'Cursor up on filewin')
     map.buf_set(true, 'n', '^', function()
       syncview = not syncview
-      util.notify('Syncview ' .. syncview, HEADER, 2)
+      util.notify('Syncview ' .. tostring(syncview), HEADER, 2)
     end, 'Toggle syncview')
     map.buf_set(true, 'n', 'j', function()
       vim.api.nvim_command('normal! j')
@@ -168,7 +168,7 @@ end
 local function rebase_buffer(selected, options, hash_rb)
   local server = start_server()
 
-  shell.set_env('NVIM_LISSTEN_ADRESS', server)
+  shell.set_env('NVIM_MUG_SERVER', server)
   shell.nvim_client('GIT_SEQUENCE_EDITOR')
   map_to_server()
   job.async(function()
@@ -227,8 +227,8 @@ local function rebase_this(options)
       return
     end
 
-    mode = string.format('--%s', mode:lower())
-    local log = vim.fn.systemlist({ 'git', 'commit', mode, hash_as })
+    mode = string.format('--%s=%s', mode:lower(), hash_as)
+    local log = vim.fn.systemlist({ 'git', 'commit', '--no-edit', mode })
 
     if vim.v.shell_error == 1 then
       util.notify(log, HEADER, 3)

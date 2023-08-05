@@ -157,7 +157,7 @@ M.open = function(count, bang, fargs)
   local server = get_server()
 
   if bang or _G.Mug.term_nvim_pseudo then
-    shell.set_env('NVIM_LISSTEN_ADRESS', server)
+    shell.set_env('NVIM_MUG_SERVER', server)
     shell.nvim_client('GIT_EDITOR')
   end
 
