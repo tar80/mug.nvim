@@ -369,7 +369,7 @@ M.rebase_i = function(name, stats, bang, fargs)
   end
 
   if (stats.s + stats.u) > 0 then
-    if not bang or stats.u > 0 then
+    if not bang and (stats.u > 0) then
       util.notify('Cannot rebase. Your index has changed', HEADER, 3)
       return
     end
