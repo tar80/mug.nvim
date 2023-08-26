@@ -7,6 +7,7 @@
 #   ^       toggle spellcheck
 #   gd      open git diff window horizontally
 #   gD      open git diff window vertically
+#   gl      mugshow git log
 #   <F5>    insert date-time
 #   <F6>    insert commit message (HEAD)
 ## Command mode ########################################################

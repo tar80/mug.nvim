@@ -49,6 +49,11 @@ M.additional_settings = function()
     patch.open('right')
   end, 'Open diff-buffer horizontally')
 
+  --Git Log
+  map.buf_set(true, { 'n'}, 'gl', function ()
+    vim.cmd('MugShow! git log -10 --oneline')
+  end, 'Open MugShow! git log', true)
+
   ---Wipeout diffchaced-window
   map.buf_set(true, 'n', 'q', function()
     patch.close()
