@@ -166,7 +166,7 @@ M.set_workspace_root = function(response)
   -- already been executed once, so we need to prevent double execution
   ]]
   skip_event = true
-  vim.api.nvim_command('silent lcd ' .. parent_dir)
+  vim.api.nvim_set_current_dir(parent_dir)
 
   if response then
     util.notify('Changed root ' .. parent_dir, HEADER, 2, false)

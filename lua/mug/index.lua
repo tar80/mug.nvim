@@ -35,9 +35,9 @@ _G.Mug._def('index_auto_update', false, true)
 hl.lazy_load(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
 
-  hl.set('MugIndexAdd', { bg = hl.shade(hlname, 0, 10, 5) }, true)
-  hl.set('MugIndexForce', { bg = hl.shade(hlname, 0, 5, 30) }, true)
-  hl.set('MugIndexReset', { bg = hl.shade(hlname, 20, 0, 5) }, true)
+  hl.set('MugIndexAdd', { bg = hl.shade(hlname, 5, 30, 20) }, true)
+  hl.set('MugIndexForce', { bg = hl.shade(hlname, 5, 20, 30) }, true)
+  hl.set('MugIndexReset', { bg = hl.shade(hlname, 30, 5, 20) }, true)
 end)
 
 hl.store('MugIndexHeader', { link = 'String' })

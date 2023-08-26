@@ -198,7 +198,7 @@ function M.setup(options)
     vim.api.nvim_command('doautocmd mug BufEnter')
   end
 
-  -- vim.g.loaded_mug = true
+  vim.g.loaded_mug = true
 end
 
 function M.reload()

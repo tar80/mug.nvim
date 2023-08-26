@@ -94,7 +94,7 @@ M.lazy_load = function(callback)
   if vim.g.colors_name then
     callback()
   else
-    vim.api.nvim_create_autocmd('CursorHold', {
+    vim.api.nvim_create_autocmd('ColorScheme', {
       group = 'mug',
       pattern = '*',
       once = true,
