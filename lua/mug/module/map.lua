@@ -15,14 +15,16 @@ local M = {}
 ---@param key usekey Target key
 ---@param callback string|function Ex command or function
 ---@param description string
-M.buf_set = function(bufnr, mode, key, callback, description)
-  if type(key) ~= 'table' then
-    vim.keymap.set(mode, key, callback, { silent = true, buffer = bufnr, desc = description })
-    return
-  end
+---@param nowait boolean
+M.buf_set = function(bufnr, mode, key, callback, description, nowait)
+  local keys = type(key) == 'table' and key or { key }
+  -- if type(key) ~= 'table' then
+  --   vim.keymap.set(mode, key, callback, { silent = true, buffer = bufnr, desc = description, nowait = nowait })
+  --   return
+  -- end
 
-  for _, v in ipairs(key) do
-    vim.keymap.set(mode, v, callback, { silent = true, buffer = bufnr, desc = description })
+  for _, v in ipairs(keys) do
+    vim.keymap.set(mode, v, callback, { silent = true, buffer = bufnr, desc = description, nowait = nowait })
   end
 end
 

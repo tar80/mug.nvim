@@ -3,7 +3,6 @@ local syntax = require('mug.module.syntax')
 local notify = require('mug.module.util').notify
 local user_command = require('mug.module.util').user_command
 
-
 local HEADER, NAMESPACE = 'mug/show', 'MugShow'
 local float_handle = 0
 

@@ -54,12 +54,12 @@ use({ 'tar80/mug.nvim',
 mug.nvim を導入するとバッファのカレントディレクトリが常に git リポジトリのルート、
 または(git リポジトリでなければ)親ディレクトリを指すようになります。
 この機能は[mattn/vim-findroot](https://github.com/mattn/vim-findroot)をベースにしていますがいくつか異なる点があります。
-詳細は[MugFindroot](#MugFindroot)をご覧下さい。
+詳細はMugFindrootをご覧ください。
 
 <details>
 <summary>MugFloat</summary>
 
-mug が生成するフローティングウィンドウ(MugFloat)には其々のコマンドで使用するキーマップの他に、
+mug が生成するフローティングウィンドウ(MugFloat)にはそれぞれのコマンドで使用するキーマップの他に、
 一律で以下のキーマップが設定されます。また、MugFloat が存在する間`<C-W>p`が上書きされ
 MugFloat のフォーカスに割り当てられます。
 
@@ -103,11 +103,11 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
   また、ディレクトリを下層へ移動する時に動作を抑制するオプションはありません。
 
 - MugFindroot は自動実行されます。手動実行時には実行結果の詳細が出力されます。
-  引数`stopglobal` `stoplocal`を指定すると其々`g:mug_findroot_disable=v:true` `b:mug_findroot_disable=v:true`が設定され
+  引数`stopglobal` `stoplocal`を指定するとそれぞれ`g:mug_findroot_disable=v:true` `b:mug_findroot_disable=v:true`が設定され
   自動実行を抑制します。解除は`MugFindroot`、または`unlet g:mug_findroot_disable` `unlet b:mug_findroot_disable`を実行します。
 
 - MugFindroot が git リポジトリを検知したとき、ブランチ名、ブランチのデタッチ状態、インデックスを取得し、
-  其々`b:mug_branch_name` `b:mug_branch_info` `b:mug_branch_stats`を設定します。
+  それぞれ`b:mug_branch_name` `b:mug_branch_info` `b:mug_branch_stats`を設定します。
   `b:mug_branch_stats`はインデックスの状態をテーブル{ s = stage, u = unstate, c = conflict }として保持します。
   ブランチのキャッシュ・デタッチ状態の取得は[kana/vim-g/branch](https://github.com/kana/vim-g)の機能を取り入れています。
 
@@ -259,7 +259,7 @@ require('mug').setup({
 
 NOTE: 差分バッファはトグルしても更新されません。更新が必要なときは`q`で一度バッファを閉じます。
 
-コミット編集バッファは`git commit`で開かれたバッファではないため如何なる変更もリポジトリに影響を与えません。
+コミット編集バッファは`git commit`で開かれたバッファではないため、いかなる変更もリポジトリに影響を与えません。
 コミットの作成にはコマンドを使用します。
 
 - `:C` commit
@@ -321,9 +321,9 @@ conflict-marker は、コンフリクトのあるバッファに対してキー�
 MugConflict はロケーションリストにキーを設定します。
 
 - ロケーションリストの表示中は`g:mug_loclist_loaded=v:true`が設定されます。
-- ロケーションリストでカーソル移動するとファイルウインドウの表示位置が連動します。
+- ロケーションリストでカーソル移動するとファイルウィンドウの表示位置が連動します。
 - `<CR>`を押すと、カーソルと表示位置を Ours-Theirs 間で往復します。
-- `w`(更新内容を保存)実行後に全てのコンフリクトが解消されていた場合、継続してコミットの作成を促す選択肢を表示します。
+- `w`(更新内容を保存)実行後にすべてのコンフリクトが解消されていた場合、継続してコミットの作成を促す選択肢を表示します。
 - undo/redo は仮対応しています。ハイライトが一致しなかったりします。
 - conflict-marker と併用できます。MugConflict 実行時は重複するハイライトが上書きされます。
 
@@ -352,7 +352,7 @@ MugConflict はロケーションリストにキーを設定します。
   ハンクの開始位置(signcolumn)に表示される文字を指定します。
 
 - filewin_indicate_position `string`(上書き)  
-  ファイルウインドウ連動時の、ハンクの画面上の位置です。  
+  ファイルウィンドウ連動時の、ハンクの画面上の位置です。  
   `upper` `center` `lower`から指定します。
 
 **highlights**
@@ -457,10 +457,10 @@ require('mug').setup({
 
 **:MugIndex[!]**
 
-`git status`の結果をフローティングウインドウに出力します。`!`を付けると`--ignored`が付加されます。  
+`git status`の結果をフローティングウィンドウに出力します。`!`を付けると`--ignored`が付加されます。  
 行ごとに Stage・Unstage・Force stage を選択でき、`<CR>`で実行されます。一番上の行を選択すると全体が選択状態になり、
 最下行にはエラーが表示されます。  
-MugIndex ウインドウには独自のキーマップが割り当てられます。
+MugIndex ウィンドウには独自のキーマップが割り当てられます。
 
 |  キー   | 説明                          |
 | :-----: | :---------------------------- |
@@ -601,14 +601,14 @@ require('mug').setup({
 **:MugRebase[!] \<branchname> [\<options>]**
 
 フローティングウィンドウに出力した`git log`の結果から起点になるコミットを選択し、  
-環境変数`GIT_SEQUENCE_EDITOR`を介して RPC 経由で`git rebase`を実行し、リベース TODO バッファを開きます。  
+環境変数`GIT_SEQUENCE_EDITOR`を介して RPC 経由で`git rebase`を実行し、リベース ToDo バッファを開きます。  
 `!`を付けるとオプション`--autostash`を付加します。
 
 **:MugRebaseSign[!] \<branchname> [\<options>]**
 
 オプション`--gpg-sign`を付加します。使用する署名を指定する場合は、variables に`commit_gpg_sign`を設定します。
 
-**リベース TODO バッファ**
+**リベース ToDo バッファ**
 
 filetype`gitrebase`で使用できるキーと、以下のキーが有効です。
 
@@ -637,10 +637,10 @@ filetype`gitrebase`で使用できるキーと、以下のキーが有効です�
   `MugCommit rebase`で行選択を解除するキーを指定します。
 
 - rebase_preview_pos `string`(上書き)  
-  リベース TODO バッファ上で`gd`を実行したときに差分バッファを開く位置を指定します。
+  リベース ToDo バッファ上で`gd`を実行したときに差分バッファを開く位置を指定します。
 
 - rebase_preview_subpos' `string`(上書き)  
-  リベース TODO バッファ上で`gD`を実行したときに差分バッファを開く位置を指定します。
+  リベース ToDo バッファ上で`gD`を実行したときに差分バッファを開く位置を指定します。
 
 **highlights**
 
@@ -666,7 +666,7 @@ require('mug').setup({
 
 **:MugShow[!] \<any>**
 
-MugShow は git とは関連のないコマンドです。引数に指定した変数、関数、コマンドの結果をフローティングウインドウに出力します。
+MugShow は git とは関連のないコマンドです。引数に指定した変数、関数、コマンドの結果をフローティングウィンドウに出力します。
 なんでもは表示できませんがそこそこ表示されます。  
 引数入力時の接頭辞(接尾辞)によって、補完候補と出力対象が選択されます。関数には引数も指定できます。
 補完候補は完全には対応できていません。
@@ -677,7 +677,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
 | `_G.`        | lua 変数       | `_G._VERSION`                |
 | `[gwbtv]:`   | vim 変数       | `v:version`                  |
 | `&`          | vim オプション | `&rtp`                       |
-| `vim.`       | 関数           | `vim.loop`, `vim.loop.cwd()` |
+| `vim.`       | 関数           | `vim.uv`, `vim.uv.cwd()` |
 | `()`(接尾辞) | vim 関数       | `expand('~')`                |
 | `nvim_`      | nvim 関数      | `nvim_list_runtime_paths()`  |
 | `:`          | コマンド       | `:version`                   |
@@ -723,11 +723,11 @@ neovim をネストさせない機能があります。
 - 引数`<position>`はターミナルを開く位置です。カレントバッファを起点に`top` `bottom` `left` `right` `float`を指定できます。
   初期値は`top`です。`term_position`で初期値を変更できます。
 - 引数`<command>`はターミナルで実行するコマンドです。コマンド終了時にバッファは閉じられます。  
-  `tig` `lazygit`などのインターフェイスを持つコマンドを指定します。
+  `tig` `lazygit`などのインタフェースを持つコマンドを指定します。
 - `!`を付けると git commit などの実行時に、ターミナル内ではなくタブにバッファを開きます。
   この機能は[lambdalisue/edita.vim](https://github.com/lambdalisue/edita.vim)をベースにしています。
   edita.vim では環境変数`EDITOR`を書き換えますが、MugTerm では`GIT_EDITOR`を書き換えます。
-  variables`term_nvim_pseudo`を`true`に設定すると、`!`の有無に関わらず有効になります。
+  variables`term_nvim_pseudo`を`true`に設定すると、`!`の有無にかかわらず有効になります。
 
 **variables**
 
@@ -864,7 +864,7 @@ neovim をネストさせない機能があります。
   })
 ```
 
-## TODO
+## ToDo
 
 - [x] rebase 暫定的に追加
 - [x] ハイライトの設定を追加
@@ -874,14 +874,14 @@ neovim をネストさせない機能があります。
 ## 謝辞
 
 mug.nvim は以下の vim-plugin のコードを内包します。  
-該当部分のライセンスは其々のプロジェクトのライセンスに従います。
+該当部分のライセンスはそれぞれのプロジェクトのライセンスに従います。
 
 - [mattn/vim-findroot](https://github.com/mattn/vim-findroot)
 - [kana/vim-g](https://github.com/kana/vim-g)
 - [ms-jpg/lua-async-await](https://github.com/ms-jpq/lua-async-await)
 - [lambdalisue/edita.vim](https://github.com/lambdalisue/edita.vim) **Deprecated**
 
-また以下のプロジェクトを参考にさせて頂きました。
+また以下のプロジェクトを参考にさせていただきました。
 
 - [rhysd/conflict-marker.vim](https://github.com/rhysd/conflict-marker.vim/)
 - [akinsho/git-conflict.nvim](https://github.com/akinsho/git-conflict.nvim)
