@@ -19,7 +19,7 @@ end
 ---@param callback function Timer content
 ---@param post function Post process
 M.set = function(winid, timeout, interval, callback, post)
-  local timer = vim.loop.new_timer()
+  local timer = vim.uv.new_timer()
   local i = 1
 
   timer:start(
@@ -53,7 +53,7 @@ end
 ---@param callback function Post process
 M.discard = function(winid, callback)
   local bss = time_tbl[winid]
-  if bss and vim.loop.is_active(bss) then
+  if bss and vim.uv.is_active(bss) then
     close(bss, winid)
     callback()
     start_wait = 100

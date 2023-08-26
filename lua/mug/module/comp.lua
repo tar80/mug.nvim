@@ -48,10 +48,10 @@ end
 ---@return table # Paths under the specified directory
 M.files = function(dir)
   local paths = {}
-  local fd = vim.loop.fs_scandir(dir)
+  local fd = vim.uv.fs_scandir(dir)
 
   while true do
-    local name = vim.loop.fs_scandir_next(fd)
+    local name = vim.uv.fs_scandir_next(fd)
 
     if not name then
       break

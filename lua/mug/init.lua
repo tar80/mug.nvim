@@ -159,7 +159,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter' }, {
     end
 
     ---Delay to accommodate user set buftype
-    local timer = vim.loop.new_timer()
+    local timer = vim.uv.new_timer()
     timer:start(
       100,
       0,

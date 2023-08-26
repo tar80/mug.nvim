@@ -56,7 +56,7 @@ end
 
 ---@return string # working directory path separated by slashes
 M.pwd = function()
-  return vim.loop.cwd():gsub('\\', '/')
+  return vim.uv.cwd():gsub('\\', '/')
 end
 
 ---@param sep string? Path separator
@@ -76,7 +76,7 @@ end
 ---@return string # Parent directory path of current file
 M.dirpath = function(sep)
   local path = vim.api.nvim_buf_get_name(0)
-  path = path == '' and vim.loop.cwd() or path:gsub('^(.+)[/\\].*$', '%1')
+  path = path == '' and vim.uv.cwd() or path:gsub('^(.+)[/\\].*$', '%1')
 
   return sep and M.normalize(path, sep) or path
 end
@@ -317,7 +317,7 @@ end
 ---@param header string Notification-header
 ---@return boolean # Is it a git-repository
 M.is_repo = function(header)
-  if vim.fn.isdirectory(vim.loop.cwd() .. M.slash() .. '.git') == 0 then
+  if vim.fn.isdirectory(vim.uv.cwd() .. M.slash() .. '.git') == 0 then
     M.notify('Current direcotry does not point to git-root', header, 3)
     return false
   end

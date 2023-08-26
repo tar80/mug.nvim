@@ -3,7 +3,7 @@
 -- Under the MIT license
 --]]
 
-local server = vim.loop.os_getenv('NVIM_MUG_SERVER')
+local server = vim.uv.os_getenv('NVIM_MUG_SERVER')
 
 if _G.Mug and not server then
   return
