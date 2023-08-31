@@ -14,16 +14,19 @@ local float_handle, input_handle = 0, 0
 local item_count = 0
 local enable_ignored = false
 
+---@type number
 local ns_add = vim.api.nvim_create_namespace(NAMESPACE .. '_Add')
+---@type number
 local ns_force = vim.api.nvim_create_namespace(NAMESPACE .. '_Force')
+---@type number
 local ns_reset = vim.api.nvim_create_namespace(NAMESPACE .. '_Reset')
 
 ---@class Mug
----@field index_add_key string key to git add selection
----@field index_force_key string key to git add --force selection
----@field index_reset_key string key to git reset selection
----@field index_clear_key string key to clear selection
----@field index_inputbar string key to launch commit input-bar
+---@field index_add_key string Key to git add selection
+---@field index_force_key string Key to git add --force selection
+---@field index_reset_key string Key to git reset selection
+---@field index_clear_key string Key to clear selection
+---@field index_inputbar string Key to launch commit input-bar
 _G.Mug._def('index_add_key', 'a', true)
 _G.Mug._def('index_force_key', 'f', true)
 _G.Mug._def('index_reset_key', 'r', true)
@@ -398,8 +401,13 @@ local function float_win_map()
   end, 'Launch commit-inputbar')
 
   map.buf_set(true, 'n', _G.Mug.index_commit, function()
+    local cwd = vim.uv.cwd()
     vim.api.nvim_win_close(0, {})
-    vim.api.nvim_command('MugCommit')
+    vim.cmd.MugCommit()
+
+    if vim.api.nvim_buf_get_name(0):find('Mug://commit/') then
+      vim.cmd.lcd(cwd)
+    end
   end, 'Open commit-editmsg')
 
   ---staging
@@ -451,7 +459,9 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
     return
   end
 
-  if not util.has_repo(HEADER) then
+  local has_repo, git_root = util.has_repo(HEADER)
+
+  if not has_repo then
     return
   end
 
@@ -464,6 +474,7 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
   end
 
   float_win(stdout)
+  vim.cmd('silent lcd ' .. git_root)
 end, {
   nargs = 0,
   bang = true,

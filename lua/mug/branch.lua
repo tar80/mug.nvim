@@ -26,6 +26,8 @@ local function branch_cache_key(root)
   return vim.fn.getftime(root .. '/.git/HEAD') + vim.fn.getftime(root .. '/.git/MERGE_HEAD')
 end
 
+---@param filepath string
+---@return table # A line-by-line table of file contents
 local function file_read(filepath)
   local handle = io.open(filepath, 'r')
   local contents = {}
@@ -153,15 +155,26 @@ local function get_branch_stats(root, chain, ignore)
   return { s = staged, u = unstaged, c = conflicted }, list
 end
 
----@param path string Git reopsitory root path
+---@param cwd string Current working directory
 ---@return string? # Git branch name
-M.branch_name = function(path)
-  local key = branch_cache_key(path)
+M.branch_name = function(cwd)
+  local git_root = vim.fs.find('.git', {
+    type = 'directory',
+    upward = true,
+  })
+
+  if #git_root ~= 0 then
+    git_root = git_root[1]:sub(1, -6)
+  else
+    git_root = cwd
+  end
+
+  local key = branch_cache_key(git_root)
   local result = 'cached'
 
-  if branch_cache[path] == nil or branch_cache[path].key ~= key then
-    if vim.fn.isdirectory(path .. '/.git') == 0 then
-      branch_cache[path] = { name = nil, info = nil, key = key, stats = nil }
+  if branch_cache[cwd] == nil or branch_cache[cwd].key ~= key then
+    if vim.fn.isdirectory(git_root .. '/.git') == 0 then
+      branch_cache[cwd] = { root = nil, name = nil, info = nil, key = key, stats = nil }
       result = ''
     else
       if vim.tbl_count(branch_cache) >= 20 then
@@ -169,15 +182,16 @@ M.branch_name = function(path)
         branch_cache = {}
       end
 
-      local name, info = get_branch_info(path)
-      branch_cache[path] = { name = name, info = info, key = key, stats = get_branch_stats(path, true) }
+      local name, info = get_branch_info(git_root)
+      branch_cache[cwd] =
+        { root = git_root, name = name, info = info, key = key, stats = get_branch_stats(git_root, true) }
       result = 'saved'
     end
   end
 
-  vim.b.mug_branch_name = branch_cache[path].name or _G.Mug.symbol_not_repository
-  vim.b.mug_branch_info = branch_cache[path].info
-  vim.b.mug_branch_stats = branch_cache[path].stats
+  vim.b.mug_branch_name = branch_cache[cwd].name or _G.Mug.symbol_not_repository
+  vim.b.mug_branch_info = branch_cache[cwd].info
+  vim.b.mug_branch_stats = branch_cache[cwd].stats
 
   return result
 end
@@ -191,7 +205,9 @@ M.branch_stats = function(root, response, ignore)
     root = util.pwd()
   end
 
-  if branch_cache[root] == nil then
+  local cached = branch_cache[root]
+
+  if cached == nil then
     local msg = 'Not a git repository'
 
     if response then
@@ -201,9 +217,9 @@ M.branch_stats = function(root, response, ignore)
     return { msg }
   end
 
-  local stats, stdout = get_branch_stats(root, false, ignore)
+  local stats, stdout = get_branch_stats(cached.root, false, ignore)
   vim.b.mug_branch_stats = stats
-  branch_cache[root].stats = stats
+  cached.stats = stats
 
   if response then
     util.notify('Update index information', HEADER, 2)
