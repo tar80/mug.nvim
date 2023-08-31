@@ -136,16 +136,6 @@ end
 vim.api.nvim_create_augroup('mug', {})
 local set_ws_root = require('mug.workspace').set_workspace_root
 
----Setup highlights
-vim.api.nvim_create_autocmd('ColorScheme', {
-  group = 'mug',
-  pattern = '*',
-  callback = function()
-    hl.init()
-  end,
-  desc = 'Setup mug highlights',
-})
-
 ---Run "findroot"
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = 'mug',

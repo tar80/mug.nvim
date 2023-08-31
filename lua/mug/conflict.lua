@@ -29,33 +29,27 @@ _G.Mug._def('conflict_anc', '^||||||| ', true)
 _G.Mug._def('conflict_sep', '^=======$', true)
 _G.Mug._def('conflict_end', '^>>>>>>> ', true)
 
-vim.api.nvim_create_autocmd('ColorScheme', {
-  group = 'mug',
-  pattern = '*',
-  once = true,
-  callback = function()
-    hl.set('MugConflictBoth', { bg = hl.shade('Normal', 20, 15, 0) }, true)
-  end,
-  desc = 'Setup mug highlights',
-})
+hl.late_record(function()
+  local name = 'MugConflictBoth'
+  local bgcolor = hl.shade(0, 'Normal', 20, 15, 0)
+  vim.api.nvim_set_hl(0, name, { bg = bgcolor })
+  hl.record(name, { ns = 0, hl = { bg = bgcolor } })
 
--- local function check_conflic_marker()
---   if vim.g.loaded_conflict_marker ~= 1 then
---     return
---   end
+  if vim.g.loaded_conflict_marker == 1 then
+    hl.record('ConflictMarkerBegin', { ns = 0, hl = { link = 'MugConflictHeader' } })
+    hl.record('ConflictMarkerCommonAncestors', { ns = 0, hl = { link = 'MugConflictHeader' } })
+    hl.record('ConflictMarkerCommonAncestorsHunk', { ns = 0, hl = { link = 'MugConflictHeader' } })
+    hl.record('ConflictMarkerSeparator', { ns = 0, hl = { link = 'MugConflictHeader' } })
+    hl.record('ConflictMarkerEnd', { ns = 0, hl = { link = 'MugConflictHeader' } })
+  end
+end)
 
---   hl.set('ConflictMarkerBegin', { link = 'MugConflictHeader' }, true)
---   hl.set('ConflictMarkerCommonAncestors', { link = 'MugConflictHeader' }, true)
---   hl.set('ConflictMarkerCommonAncestorsHunk', { link = 'MugConflictHeader' }, true)
---   hl.set('ConflictMarkerSeparator', { link = 'MugConflictHeader' }, true)
---   hl.set('ConflictMarkerEnd', { link = 'MugConflictHeader' }, true)
--- end
-
-hl.store('MugConflictHeader', { fg = '#777777', bg = '#000000' })
-hl.store('MugConflictBase', { link = 'DiffDelete' })
-hl.store('MugConflictOurs', { link = 'DiffChange' })
-hl.store('MugConflictTheirs', { link = 'DiffAdd' })
-hl.store('MugConflictBeacon', { link = 'Search' })
+hl.record('MugConflictBoth', { ns = 0, hl = { bg = hl.shade(0, 'Normal', 20, 15, 0) } })
+hl.record('MugConflictHeader', { ns = 0, hl = { fg = '#777777', bg = '#000000' } })
+hl.record('MugConflictBase', { ns = 0, hl = { link = 'DiffDelete' } })
+hl.record('MugConflictOurs', { ns = 0, hl = { link = 'DiffChange' } })
+hl.record('MugConflictTheirs', { ns = 0, hl = { link = 'DiffAdd' } })
+hl.record('MugConflictBeacon', { ns = 0, hl = { link = 'Search' } })
 
 local function get_conflict_files()
   return vim.fn.systemlist(

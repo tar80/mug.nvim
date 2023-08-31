@@ -35,17 +35,22 @@ _G.Mug._def('index_inputbar', '@', true)
 _G.Mug._def('index_commit', '`', true)
 _G.Mug._def('index_auto_update', false, true)
 
-hl.lazy_load(function()
+hl.late_record(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
-
-  hl.set('MugIndexAdd', { bg = hl.shade(hlname, 5, 30, 20) }, true)
-  hl.set('MugIndexForce', { bg = hl.shade(hlname, 5, 20, 30) }, true)
-  hl.set('MugIndexReset', { bg = hl.shade(hlname, 30, 5, 20) }, true)
+  local items = {
+    MugIndexAdd = hl.shade(0, hlname, 5, 20, 10),
+    MugIndexForce = hl.shade(0, hlname, 5, 10, 20),
+    MugIndexReset = hl.shade(0, hlname, 20, 5, 10),
+  }
+  for name, value in pairs(items) do
+    -- vim.api.nvim_set_hl(0, name, { bg = value })
+    hl.set_hl(name, { ns = 0, hl = { bg = value } })
+  end
 end)
 
-hl.store('MugIndexHeader', { link = 'String' })
-hl.store('MugIndexStage', { link = 'Statement' })
-hl.store('MugIndexUnstage', { link = 'ErrorMsg' })
+hl.record('MugIndexHeader', { ns = 0, hl = { link = 'String' } })
+hl.record('MugIndexStage', { ns = 0, hl = { link = 'Statement' } })
+hl.record('MugIndexUnstage', { ns = 0, hl = { link = 'ErrorMsg' } })
 
 ---@return boolean # Error occurred
 ---@return table # Git status result

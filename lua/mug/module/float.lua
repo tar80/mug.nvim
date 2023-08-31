@@ -1,5 +1,6 @@
 local map = require('mug.module.map')
 local util = require('mug.module.util')
+local hl = require('mug.module.highlight')
 
 ---@class float
 ---@filed title function Adjust float title
@@ -20,9 +21,27 @@ _G.Mug._def('float_winblend', 0, true)
 
 ---Disable highlighting for floating-window when navigating to input-bar
 local ns_inputbar = vim.api.nvim_create_namespace(namespace)
+local ns_float = vim.api.nvim_create_namespace('MugFloatNC')
 
-do
-  local normal_bg = vim.api.nvim_get_hl_by_name('Normal', true).background
+---@param ns integer Namespace
+---@param name string Hlgroup
+---@return integer # Background color code
+local get_bgcolor = function(ns, name)
+  local color_tbl = vim.api.nvim_get_hl(ns, { name = name })
+  local bg = 0
+
+  if color_tbl.bg then
+    bg = color_tbl.bg
+  elseif color_tbl.link then
+    bg = vim.api.nvim_get_hl(ns, { name = color_tbl.link }).bg or 0
+  end
+
+  return bg
+end
+
+hl.late_record(function()
+  local normal_bg = get_bgcolor(0, 'Normal')
+  local nc_bg = get_bgcolor(0, 'NormalNC')
   local items = {
     'Title',
     'NormalNC',
@@ -31,10 +50,18 @@ do
     'ColorColumn',
   }
 
-  for _, v in ipairs(items) do
-    vim.api.nvim_set_hl(ns_inputbar, v, { bg = normal_bg })
+  for _, name in ipairs(items) do
+    hl.set_hl(name, { ns = ns_inputbar, hl = { bg = normal_bg } })
   end
-end
+
+  local nc_items = {
+    'FloatTitle',
+    'FloatBorder',
+  }
+  for _, name in ipairs(nc_items) do
+    hl.set_hl(name, { ns = ns_float, hl = { bg = nc_bg } })
+  end
+end)
 
 ---@alias float_relative string Layout the float to place at
 ---@alias float_anchor string Decides which corner of the float to place at
@@ -94,8 +121,9 @@ local function max_range()
 end
 
 local function buf_close(bufnr, title, reason)
-  vim.api.nvim_command('bwipeout ' .. bufnr)
-  vim.notify('[' .. title .. '] ' .. reason)
+  vim.cmd.bwipeout(bufnr)
+  -- vim.api.nvim_command('bwipeout ' .. bufnr)
+  util.notify('[' .. title .. '] ' .. reason)
 end
 
 setmetatable(Float, {
@@ -195,16 +223,16 @@ local function float_win_cmd_and_map()
     vim.api.nvim_win_set_config(0, { relative = 'win', row = d.row, col = d.col })
   end
 
-  map.buf_set(true, 'n', '<M-h>', function ()
+  map.buf_set(true, 'n', '<M-h>', function()
     float_move('h')
   end, 'Float shift left')
-  map.buf_set(true, 'n', '<M-j>', function ()
+  map.buf_set(true, 'n', '<M-j>', function()
     float_move('j')
   end, 'Float shift right')
-  map.buf_set(true, 'n', '<M-k>', function ()
+  map.buf_set(true, 'n', '<M-k>', function()
     float_move('k')
   end, 'Float shift down')
-  map.buf_set(true, 'n', '<M-l>', function ()
+  map.buf_set(true, 'n', '<M-l>', function()
     float_move('l')
   end, 'Float shift up')
   map.ref_maps()
@@ -279,10 +307,12 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
     buffer = bufnr,
     callback = function()
       if terminal then
-        vim.api.nvim_command('startinsert')
+        -- vim.api.nvim_command('startinsert')
+        vim.cmd.startinsert()
       end
 
-      vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
+      vim.api.nvim_set_option_value('winblend', _G.Mug.float_winblend, { win = 0 })
+      -- vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
       vim.api.nvim_win_set_config(
         0,
         { relative = 'editor', row = row, col = col, height = float_height, width = float_width }
@@ -323,7 +353,8 @@ end
 local function create_float(bufnr, opts)
   local handle = vim.api.nvim_open_win(bufnr, true, opts)
 
-  vim.api.nvim_command('clearjumps')
+  vim.cmd.clearjumps()
+  -- vim.api.nvim_command('clearjumps')
 
   return { bufnr = bufnr, handle = handle }
 end
@@ -341,6 +372,7 @@ M.open = function(tbl)
 
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
 
+  vim.api.nvim_win_set_hl_ns(0, ns_float)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave)
@@ -351,7 +383,7 @@ M.open = function(tbl)
   -- messages can be skipped if the window is set to insert mode,
   -- but this is not adopted because it increases unnecessary processing.
   --]]
-  print(' ')
+  -- print(' ')
 
   return buf
 end

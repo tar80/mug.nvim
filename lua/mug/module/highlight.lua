@@ -1,17 +1,14 @@
 ---@class hl
----@field shade function Change the shade of the specified highlight
----@field store function Store highlight-group setting
----@field set function Setup the specified highlight
----@field customize function Customize the specified highlights
----@field lazy_load function Highlights set after applying a colorscheme
----@field init function Mug-specific highlight preferences
 local M = {}
+---@type {[string]: table}
 local stored_hl = {}
+---@type function[]
+local stored_func = {}
 
----@alias ratio integer Percentage to increace or decreace
 ---@alias ns number Namespace
 ---@alias hlname string Highlight name
----@alias opts table Highlight options
+---@alias ratio integer Percentage to increace or decreace
+---@alias opts {ns: number, hl: table} Highlight options
 
 ---@param int ratio
 ---@return integer # Incremental value
@@ -22,7 +19,7 @@ end
 ---@param decimal integer Background color in decimal notation
 ---@param color string The name of primary color
 ---@param int ratio
----@return number # Value of the primary color
+---@return integer # Value of the primary color
 local function adjust_color(decimal, color, int)
   local digit = { red = { 1, 2 }, green = { 3, 4 }, blue = { 5 } }
   local intensity = string.format('%06x', decimal):sub(unpack(digit[color]))
@@ -32,7 +29,7 @@ local function adjust_color(decimal, color, int)
 end
 
 ---@param options opts
----@return table options
+---@return table opts
 local function unity_fields(options)
   local items = { bg = 'background', fg = 'foreground' }
 
@@ -46,13 +43,24 @@ local function unity_fields(options)
   return options
 end
 
+---Increments the field values of the specified hlgroup by a percentage
+---@param ns integer Namespace
 ---@param name hlname
 ---@param red integer Incremental ratio of red
 ---@param green integer Incremental ratio of green
 ---@param blue integer Incremental ratio of blue
 ---@return string # Color-code in decimal notation
-M.shade = function(name, red, green, blue)
-  local decimal = vim.api.nvim_get_hl_by_name(name, true).background or 0
+M.shade = function(ns, name, red, green, blue)
+  local hl_tbl = vim.api.nvim_get_hl(ns, { name = name })
+  local decimal
+  if hl_tbl.bg then
+    decimal = hl_tbl.bg
+  elseif hl_tbl.link then
+    decimal = vim.api.nvim_get_hl(ns, { name = hl_tbl.link }).bg or 0
+  else
+    decimal = 0
+  end
+
   local r = adjust_color(decimal, 'red', red)
   local g = adjust_color(decimal, 'green', green)
   local b = adjust_color(decimal, 'blue', blue)
@@ -60,39 +68,67 @@ M.shade = function(name, red, green, blue)
   return string.format('#%02x%02x%02x', r, g, b)
 end
 
+---Record hlgroup settings
 ---@param name hlname
 ---@param options opts
-M.store = function(name, options)
-  options = unity_fields(options)
-  stored_hl = vim.tbl_deep_extend('force', stored_hl, { [name] = { opts = options } })
+M.record = function(name, options)
+  if stored_hl[name] then
+    return
+  end
+
+  local hl = unity_fields(options.hl)
+  stored_hl = vim.tbl_deep_extend('force', stored_hl, { [name] = { ns = options.ns, opts = hl } })
 end
 
+---Record and set hlgroup after applying a colorscheme
+---@param callback function
+M.late_record = function(callback)
+  table.insert(stored_func, callback)
+end
+
+---Record and set hlgroup setting
 ---@param name hlname
 ---@param options opts
----@param keep? boolean Table merge behavior choose "keep"
-M.set = function(name, options, keep)
-  local behavior = keep and 'keep' or 'force'
-  options = unity_fields(options)
-  stored_hl = vim.tbl_deep_extend(behavior, stored_hl, { [name] = { opts = options } })
-
-  vim.api.nvim_set_hl(0, name, stored_hl[name].opts)
+M.set_hl = function(name, options)
+  vim.api.nvim_set_hl(options.ns, name, options.hl)
+  M.record(name, options)
 end
 
----@param items table Hl-group settings
+---Update stored_hl
+---@param items table Hlgroup settings
 M.customize = function(items)
   if not items then
     return
   end
 
   for k, v in pairs(items) do
-    M.store(k, v)
+    v = unity_fields(v)
+    stored_hl[k] = { ns = 0, opts = v }
   end
 end
 
----@param callback function Hl-group settings
+---Setup highlights
+local post_process = function()
+  for _, func in ipairs(stored_func) do
+    func()
+  end
+
+  vim.api.nvim_create_autocmd('ColorScheme', {
+    group = 'mug',
+    pattern = '*',
+    callback = function()
+      M.init()
+    end,
+    desc = 'Setup mug highlights',
+  })
+end
+
+---Defer setup highlights at vim startup
+---@param callback function hlgroup settings
 M.lazy_load = function(callback)
   if vim.g.colors_name then
     callback()
+    post_process()
   else
     vim.api.nvim_create_autocmd('ColorScheme', {
       group = 'mug',
@@ -100,19 +136,16 @@ M.lazy_load = function(callback)
       once = true,
       callback = function()
         callback()
+        post_process()
       end,
-      desc = 'Lazy setup mug highlights',
+      desc = 'Lazy setup the mug highlights',
     })
   end
 end
 
 M.init = function()
-  for k, v in pairs(stored_hl) do
-    if vim.fn.hlexists(k) == 1 and not vim.api.nvim_get_hl_by_name(k, true)[true] then
-      M.store(k, vim.api.nvim_get_hl_by_name(k, {}))
-    else
-      vim.api.nvim_set_hl(0, k, v.opts)
-    end
+  for name, hl in pairs(stored_hl) do
+    vim.api.nvim_set_hl(hl.ns, name, hl.opts)
   end
 end
 

@@ -36,17 +36,16 @@ _G.Mug._def('rebase_clear_key', 'c', true)
 _G.Mug._def('rebase_preview_pos', 'bottom', true)
 _G.Mug._def('rebase_preview_subpos', 'right', true)
 
-hl.lazy_load(function()
+hl.late_record(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
-
-  hl.set('MugRebaseFixup', { bg = hl.shade(hlname, 0, 10, 5) }, true)
-  hl.set('MugRebaseSquash', { bg = hl.shade(hlname, 0, 5, 30) }, true)
+  hl.set_hl('MugRebaseFixup', { ns = 0, hl = { bg = hl.shade(0, hlname, 0, 10, 5) } })
+  hl.set_hl('MugRebaseSquash', { ns = 0, hl = { bg = hl.shade(0, hlname, 0, 5, 30) } })
 end)
 
-hl.store('MugLogHash', { link = 'Special' })
-hl.store('MugLogDate', { link = 'Statement' })
-hl.store('MugLogOwner', { link = 'Conditional' })
-hl.store('MugLogHead', { link = 'Keyword' })
+hl.record('MugLogHash', { ns = 0, hl = { link = 'Special' } })
+hl.record('MugLogDate', { ns = 0, hl = { link = 'Statement' } })
+hl.record('MugLogOwner', { ns = 0, hl = { link = 'Conditional' } })
+hl.record('MugLogHead', { ns = 0, hl = { link = 'Keyword' } })
 
 local select_hl = {
   squash = 'MugRebaseSquash',
