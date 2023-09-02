@@ -65,8 +65,9 @@ local function branch_head(root, filepath, state)
 
         for i = #lines, 1, -1 do
           if lines[i]:find('checkout: moving from', 1, true) ~= nil then
-            branch_name = lines[i]:match('to%s([^%s]+)')
+            branch_name = lines[i]:match('to%s([^%s]+)'):sub(0, 7)
             state = 'Detached'
+            break;
           end
         end
       end
