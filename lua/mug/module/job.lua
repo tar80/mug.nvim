@@ -4,10 +4,10 @@
 --]]
 
 ---@class job
----@field async function
----@field await function
 local M = {}
 
+---Sub process of the job.async. Asynchronous execution job
+---@async
 ---@param command table Shell-command and options
 ---@return function thunk Async job
 local async_job = function(command)
@@ -38,6 +38,8 @@ local async_job = function(command)
   return thunk
 end
 
+---Asynchronous execution process
+---@async
 ---@param func function Coroutine thread
 ---@param callback? function Post-processing thread
 M.async = function(func, callback)
@@ -61,9 +63,9 @@ M.async = function(func, callback)
   step()
 end
 
-
+---Wait for the result of the async job
 ---@param command table Shell-command and options
----@return table stdout, number loglevel
+---@return table stdout, integer loglevel
 M.await = function(command)
   return coroutine.yield(async_job(command))
 end

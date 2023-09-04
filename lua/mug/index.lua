@@ -14,11 +14,11 @@ local float_handle, input_handle = 0, 0
 local item_count = 0
 local enable_ignored = false
 
----@type number
+---@type integer
 local ns_add = vim.api.nvim_create_namespace(NAMESPACE .. '_Add')
----@type number
+---@type integer
 local ns_force = vim.api.nvim_create_namespace(NAMESPACE .. '_Force')
----@type number
+---@type integer
 local ns_reset = vim.api.nvim_create_namespace(NAMESPACE .. '_Reset')
 
 ---@class Mug
@@ -35,6 +35,7 @@ _G.Mug._def('index_inputbar', '@', true)
 _G.Mug._def('index_commit', '`', true)
 _G.Mug._def('index_auto_update', false, true)
 
+---Record highlight settings after invoking autocmd ColorScheme
 hl.late_record(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
   local items = {
@@ -43,7 +44,6 @@ hl.late_record(function()
     MugIndexReset = hl.shade(0, hlname, 20, 5, 10),
   }
   for name, value in pairs(items) do
-    -- vim.api.nvim_set_hl(0, name, { bg = value })
     hl.set_hl(name, { ns = 0, hl = { bg = value } })
   end
 end)
@@ -52,12 +52,13 @@ hl.record('MugIndexHeader', { ns = 0, hl = { link = 'String' } })
 hl.record('MugIndexStage', { ns = 0, hl = { link = 'Statement' } })
 hl.record('MugIndexUnstage', { ns = 0, hl = { link = 'ErrorMsg' } })
 
+---Run "git status" to get results
 ---@return boolean # Error occurred
 ---@return table # Git status result
 local function get_stats()
   local ignore = enable_ignored
   local lines = branch.branch_stats(nil, false, ignore)
-  local err = lines[1] == 'Not a git repository' or lines[1] == 'fatal:'
+  local err = lines[1] == 'Not a git repository' or (lines[1] == 'fatal:')
   item_count = #lines
 
   if item_count == 2 and lines[2] == '' then
@@ -68,6 +69,11 @@ local function get_stats()
   return err, lines
 end
 
+---@alias Error boolean # Error occurred
+
+---Create index summary
+---@return Error
+---@return string[] # Index summaries
 local function initial_idx()
   local err, lines = get_stats()
   local summary = vim.fn.systemlist(util.gitcmd({ cmd = 'diff', opts = { '--no-color', '--compact-summary', 'HEAD' } }))
@@ -94,6 +100,10 @@ local function initial_idx()
   return err, lines
 end
 
+
+---Update indexes
+---@return Error
+---@return string[] # Lines of the buffer
 local function update_idx()
   local err, lines = get_stats()
 
@@ -106,6 +116,7 @@ local function update_idx()
   return err, lines
 end
 
+---Staging selected files
 ---@return boolean # Whether the index has changed
 local function do_stage()
   local linewise = {
@@ -141,7 +152,8 @@ local function do_stage()
       vim.api.nvim_buf_clear_namespace(0, v.ns, 0, -1)
 
       if vim.api.nvim_get_vvar('shell_error') ~= 0 then
-        table.insert(error_msg, '[' .. v.subcmd .. '] ' .. output[1])
+        table.insert(error_msg, string.format('[%s] %s', v.subcmd, output[1]))
+        -- table.insert(error_msg, '[' .. v.subcmd .. '] ' .. output[1])
       end
     end
 
@@ -155,13 +167,19 @@ local function do_stage()
   return skip ~= 3
 end
 
-local function modify_buffer(range, contents)
-  vim.api.nvim_buf_set_option(0, 'modifiable', true)
-  vim.api.nvim_buf_set_text(0, 0, 0, range - 1, 0, contents)
-  vim.api.nvim_buf_set_option(0, 'modifiable', false)
+---Change the content of the line
+---@param line integer Number of lines held by current buffer
+---@param contents string[] Changes
+local function modify_buffer(line, contents)
+  vim.api.nvim_set_option_value('modifiable', true, { buf = 0})
+  -- vim.api.nvim_buf_set_option(0, 'modifiable', true)
+  vim.api.nvim_buf_set_text(0, 0, 0, line - 1, 0, contents)
+  vim.api.nvim_set_option_value('modifiable', false, {buf = 0})
+  -- vim.api.nvim_buf_set_option(0, 'modifiable', false)
 end
 
----@param result? table Stdout of git status
+---Update the buffer of the MugIndex
+---@param result? table Stdout of the "git status"
 local function update_buffer(result)
   local buf_lines = vim.api.nvim_buf_line_count(0)
   local err, lines = update_idx()
@@ -188,6 +206,7 @@ local function update_buffer(result)
   end
 end
 
+---Auto update on buffer focus
 local function auto_update()
   vim.api.nvim_create_autocmd({ 'BufEnter', 'FocusGained' }, {
     group = 'mug',
@@ -200,8 +219,9 @@ local function auto_update()
 end
 
 ---@alias namespace string Specifies namespace
----@alias ln number Specifies line number
+---@alias ln integer Specifies line number
 
+---Update an extmark for the specified line
 ---@param ns namespace
 ---@param row ln
 local function set_extmark(ns, row)
@@ -220,8 +240,9 @@ local function set_extmark(ns, row)
   end
 end
 
+---Update an extmark to current line
 ---@param ns namespace
----@return number? # Number of lines held by current buffer
+---@return integer? # Number of lines held by current buffer
 local function select_this(ns)
   local row = vim.api.nvim_win_get_cursor(0)[1]
 
@@ -240,7 +261,8 @@ local function select_this(ns)
   return row
 end
 
----@param direction? number Direction of cursor movement
+---Set an extmark and move the cursor by one
+---@param direction? integer Direction of cursor movement
 local function add_this(direction)
   local ln = select_this('add')
 
@@ -256,6 +278,11 @@ local function add_this(direction)
   end
 end
 
+---Update the title of the commit-input-bar
+---@param title string Changed title
+---@param keyid string ID of the gpg-sign
+---@param sign string[] `--gpg-sign` or `empty`
+---@param amend string[] `--amend` or `empty`
 local function update_imputbar_title(title, keyid, sign, amend)
   local new_title = { title }
 
@@ -271,11 +298,12 @@ local function update_imputbar_title(title, keyid, sign, amend)
   vim.api.nvim_win_set_config(0, { title_pos = 'center', title = title })
 end
 
+---Set keymaps to the commit-input-bar
 local function input_commit_map()
   local sign, amend = {}, {}
   local title = vim.api.nvim_win_get_config(0).title[1][1]
   title = title:sub(2, #title - 1)
-  local keyid = _G.Mug.commit_gpg_sign and '--gpg-sign=' .. _G.Mug.commit_gpg_sign or '--gpg-sign'
+  local keyid = _G.Mug.commit_gpg_sign and string.format('--gpg-sign=%s',  _G.Mug.commit_gpg_sign) or '--gpg-sign'
 
   map.buf_set(true, 'i', '<C-o><C-s>', function()
     sign = #sign == 0 and { keyid } or {}
@@ -298,35 +326,38 @@ local function input_commit_map()
 
     local cmdline = util.gitcmd({ cmd = 'commit', opts = { sign, amend, '--cleanup=default', msg } })
 
-    vim.api.nvim_command('stopinsert!|quit')
+    vim.cmd('stopinsert!|quit')
     local stdout = vim.fn.systemlist(cmdline)
 
     update_buffer(stdout)
   end, 'Update index')
 end
 
+---Get the file-path from the line contents
+---@return string|nil # File-path or nil
 local function linewise_path()
   local root = vim.fs.find('.git', { type = 'directory', upward = true })[1]
   local relative = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
-  ---@type string|nil
-  local path = string.format('%s%s', root:gsub('.git', '') , relative)
+  local path = string.format('%s%s', root:gsub('.git', ''), relative)
   if not util.file_exist(path) then
-    path = nil
+    return  nil
   end
 
   return path
 end
 
+---Close buffer and diff off
 local function diff_close()
-  if not vim.api.nvim_win_get_option(0, 'diff') then
+  if not vim.api.nvim_get_option_value('diff', { win = 0 }) then
     return
   end
 
   if vim.fn.winbufnr(2) ~= -1 then
-    vim.api.nvim_command('close|diffoff')
+    vim.cmd('close|diffoff')
   end
 end
 
+---Set keymaps to the floating window
 local function float_win_map()
   map.buf_set(true, 'n', 'gd', function()
     if not package.loaded['mug.diff'] then
@@ -340,9 +371,10 @@ local function float_win_map()
       return
     end
 
-    vim.api.nvim_command('wincmd p')
+    vim.cmd.wincmd('p')
     diff_close()
-    vim.api.nvim_command('edit ' .. path .. '|MugDiff')
+    vim.cmd.edit(path)
+    vim.cmd.MugDiff()
   end, 'Open the path at the cursor line')
 
   map.buf_set(true, 'n', 'gf', function()
@@ -352,7 +384,7 @@ local function float_win_map()
       return
     end
 
-    vim.api.nvim_command('wincmd p|edit ' .. path)
+    vim.cmd('wincmd p|edit ' .. path)
   end, 'Open file diff')
 
   map.buf_set(true, 'n', '<F5>', function()
@@ -425,6 +457,7 @@ local function float_win_map()
   end, 'Update the index of selected files')
 end
 
+---Processing after floating window startup
 local function float_win_post()
   vim.api.nvim_buf_set_option(0, 'modifiable', false)
   syntax.index()
@@ -436,6 +469,8 @@ local function float_win_post()
   end
 end
 
+---Set floating window
+---@stdout 
 local function float_win(stdout)
   local name = vim.b.mug_branch_name
   local stats = vim.b.mug_branch_stats
@@ -479,7 +514,7 @@ vim.api.nvim_create_user_command(NAMESPACE, function(opts)
   end
 
   float_win(stdout)
-  vim.cmd('silent lcd ' .. git_root)
+  vim.cmd.lcd(git_root)
 end, {
   nargs = 0,
   bang = true,

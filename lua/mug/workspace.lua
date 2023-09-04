@@ -7,12 +7,13 @@ local util = require('mug.module.util')
 local branch = require('mug.branch')
 
 ---@class ws
----@field set_workspace_root fun(response?: boolean) : string
 local M = {}
 local HEADER = 'mug/findroot'
 local FINDROOT_DISABLED = 'mug_findroot_disable'
+---@type boolean
 local skip_event
 
+---Compare the specified path with pwd
 ---@param path string Path to be compared
 ---@return string # Comparing results
 local function compare_wd(path)
@@ -31,7 +32,7 @@ end
 local get_parent_directory = function()
   local path = util.dirpath('/')
   local status = compare_wd(path)
-  local buftype = vim.api.nvim_buf_get_option(0, 'buftype')
+  local buftype = vim.api.nvim_get_option_value('buftype', { buf = 0 })
 
   if path == '.' then
     return nil, nil
@@ -41,7 +42,7 @@ local get_parent_directory = function()
     return 'special', path
   end
 
-  local buf_ft = vim.api.nvim_buf_get_option(0, 'filetype')
+  local buf_ft = vim.api.nvim_get_option_value('filetype', { buf = 0 })
   local ignore_ft = _G.Mug.ignore_filetypes
 
   if vim.tbl_contains(ignore_ft, buf_ft) then
@@ -51,6 +52,7 @@ local get_parent_directory = function()
   return status, path
 end
 
+---Set branch name
 ---@param marker string Git repository root marker
 ---@param path string Detected path
 local function query_branch_is(marker, path)
@@ -61,8 +63,10 @@ local function query_branch_is(marker, path)
   end
 end
 
+---Detect the project root path
+---@async
 ---@param path string Path to be detected
----@return string? # Project root path
+---@return string? # The project root path
 local function detect_project_root(path)
   if vim.fn.isdirectory(path) == 1 then
     path = path:gsub('([^/])$', '%1/')
@@ -77,7 +81,7 @@ local function detect_project_root(path)
       end
 
       for i, v in ipairs(patterns) do
-        match_path = dir .. '/' .. v
+        match_path = string.format('%s/%s', dir, v)
 
         if v:find('*', 1, true) and vim.fn.glob(match_path, 1) ~= '' then
           patterns, upward = coroutine.yield(i, dir, '')
@@ -117,8 +121,9 @@ local function detect_project_root(path)
   return path
 end
 
+---Set local working directory
 ---@param response? boolean show result message
----@return string # Result of comparing parent directories
+---@return 'startup'|'change'|'same'|'differ'
 M.set_workspace_root = function(response)
   local disable_global = vim.g[FINDROOT_DISABLED]
   local disable_local = vim.b[FINDROOT_DISABLED]
@@ -139,7 +144,8 @@ M.set_workspace_root = function(response)
 
   if status ~= 'differ' and status ~= 'same' then
     if response then
-      util.notify('Skipped the ' .. status .. ' path', HEADER, 3, false)
+      local msg = string.format('Skipped %s path', status)
+      util.notify(msg, HEADER, 3, false)
     end
 
     return status
@@ -151,7 +157,7 @@ M.set_workspace_root = function(response)
   if workspace ~= nil then
     if workspace == pwd then
       if response then
-        util.notify('Skipped pointing to the same path', HEADER, 3, false)
+        util.notify('Skipped pointing to same path', HEADER, 3, false)
       end
 
       return 'same'
@@ -166,10 +172,13 @@ M.set_workspace_root = function(response)
   -- already been executed once, so we need to prevent double execution
   ]]
   skip_event = true
-  vim.api.nvim_set_current_dir(parent_dir)
+  vim.cmd.lcd(parent_dir)
+  -- vim.cmd('silent lcd ' .. parent_dir)
+  -- vim.api.nvim_set_current_dir(parent_dir)
 
   if response then
-    util.notify('Changed root ' .. parent_dir, HEADER, 2, false)
+    local msg = string.format('Changed root %s', parent_dir)
+    util.notify(msg, HEADER, 2, false)
   end
 
   vim.g[FINDROOT_DISABLED] = disable_global
@@ -184,12 +193,13 @@ vim.api.nvim_create_autocmd({ 'DirChangedPre' }, {
   pattern = { 'global', 'tabpage', 'window' },
   callback = function()
     if skip_event then
-      skip_event = nil
+      skip_event = false
       return
     end
 
     local path = util.conv_slash(vim.api.nvim_get_vvar('event').directory)
     detect_project_root(path)
+    vim.cmd.redrawstatus()
   end,
   desc = 'Detect project-root and set git-status',
 })

@@ -12,8 +12,8 @@ local ns = vim.api.nvim_create_namespace(NAMESPACE)
 local winpos = 'zz'
 
 ---@class Mug
----@field loclist_position string Specified position of location-list
----@filed loclist_disable_number boolean Hide line-number in location-list
+---@field loclist_position string Specified position of loclist
+---@field loclist_disable_number boolean Hide line-number in loclist
 ---@field filewin_beacon string Characters to be specified for beacon
 ---@field filewin_indicate_position string `upper` or `center` or `lower`
 ---@field conflict_begin string String identified as the start of the conflict
@@ -29,6 +29,7 @@ _G.Mug._def('conflict_anc', '^||||||| ', true)
 _G.Mug._def('conflict_sep', '^=======$', true)
 _G.Mug._def('conflict_end', '^>>>>>>> ', true)
 
+---Record highlight settings after doing autocmd ColorScheme
 hl.late_record(function()
   local name = 'MugConflictBoth'
   local bgcolor = hl.shade(0, 'Normal', 20, 15, 0)
@@ -51,20 +52,23 @@ hl.record('MugConflictOurs', { ns = 0, hl = { link = 'DiffChange' } })
 hl.record('MugConflictTheirs', { ns = 0, hl = { link = 'DiffAdd' } })
 hl.record('MugConflictBeacon', { ns = 0, hl = { link = 'Search' } })
 
+--Get the name of conflict files
 local function get_conflict_files()
   return vim.fn.systemlist(
     util.gitcmd({ noquotepath = true, cmd = 'diff', opts = { '--diff-filter=U', '--name-only' } })
   )
 end
 
----@param winid number Window-id
----@return number # Cursor position in the specified window
+---Get the cursor line of the filewin
+---@param winid integer Window id
+---@return integer # Cursor line
 local function current_line(winid)
   return vim.api.nvim_win_get_cursor(winid)[1]
 end
 
----@param winid number window-id
----@param row number specified line number to move the cursor to
+---Place the cursor on the filewin line
+---@param winid integer Window id
+---@param row integer Specified line number to move the cursor to
 local function set_cursor(winid, row)
   local bufnr = vim.api.nvim_win_get_buf(winid)
   local lastline = vim.api.nvim_buf_line_count(bufnr)
@@ -72,8 +76,9 @@ local function set_cursor(winid, row)
   vim.api.nvim_win_set_cursor(winid, { row, 0 })
 end
 
+---Get loclist details
 ---@param text string
----@return table # {name, start, end, ext_id}
+---@return string[] # {name, start, end, ext_id}
 local function split_text(text)
   local t = {}
   text = text:gsub('^([^|]+)|(%d+)-(%d+)|%s(%d+)', '%1,%2,%3,%4')
@@ -85,17 +90,19 @@ local function split_text(text)
   return t
 end
 
+---Update contents of loclist
 ---@param callback function
 local function modify_loclist(callback)
-  vim.api.nvim_buf_set_option(0, 'modifiable', true)
+  vim.api.nvim_set_option_value('modifiable', true, { scope = 'local' })
   callback()
-  vim.api.nvim_buf_set_option(0, 'modifiable', false)
-  vim.api.nvim_buf_set_option(0, 'modified', false)
+  vim.api.nvim_set_option_value('modifiable', false, { scope = 'local' })
+  vim.api.nvim_set_option_value('modified', false, { scope = 'local' })
 end
 
+---Adjust the filewin cursor position
 ---@param toggle? boolean Whether to toggle the cursor position
----@return number bufnr Filewin buffer number
----@return number extmark-id Extmark id of hunks
+---@return integer bufnr Filewin buffer number
+---@return table extmark-id Extmark id of hunks
 local function adjust_filewin(toggle)
   local loc_row = current_line(0)
   local loc_contents = vim.fn.getloclist(0, { all = 0 })
@@ -111,26 +118,27 @@ local function adjust_filewin(toggle)
   local selected = vim.api.nvim_get_current_line():match(',$') == nil
 
   if winid == 0 or loc_row ~= loc_contents.idx then
-    vim.api.nvim_command('ll ' .. loc_row)
+    vim.cmd.ll(loc_row)
     winid = vim.api.nvim_get_current_win()
-    vim.api.nvim_command('wincmd p')
+    vim.cmd.wincmd('p')
   elseif toggle and not selected and new_row >= win_row then
-    new_row = theirs <= win_row and new_row or theirs
+    new_row = (theirs <= win_row) and new_row or theirs
   end
 
   vim.api.nvim_win_call(winid, function()
-    vim.api.nvim_command('normal ' .. new_row .. 'G' .. winpos)
+    vim.cmd.normal(string.format('%sG%s', new_row, winpos))
   end)
 
   return winnr, markers
 end
 
----@param close number End of the conflict region
+---Fix confilicts in the selected range
+---@param close integer End of the conflict region
 ---@param selected string Selected diff-content
-local function update_loclist(close, selected)
+local function update_selected_range(close, selected)
   local filename, begin, stop, ext_id = unpack(split_text(vim.api.nvim_get_current_line()))
   local new_lines = {}
-  new_lines[1] = filename .. '|' .. begin .. '-' .. close + 1 .. '| ' .. ext_id .. ',' .. selected
+  new_lines[1] = string.format('%s|%s-%s| %s,%s', filename, begin, close + 1, ext_id, selected)
 
   local subtraction = (stop - begin) - (1 + close - begin)
   local lnum = current_line(0)
@@ -141,7 +149,7 @@ local function update_loclist(close, selected)
       _, begin, stop, ext_id = unpack(split_text(v))
       begin = begin - subtraction
       stop = stop - subtraction
-      new_lines[i + 1] = filename .. '|' .. begin .. '-' .. stop .. '| ' .. ext_id .. ','
+      new_lines[i + 1] = string.format('%s|%s-%s| %s,', filename, begin, stop, ext_id)
     end
   end
 
@@ -150,10 +158,11 @@ local function update_loclist(close, selected)
   end)
 end
 
----@param bufnr number
----@param extid number
----@return number # hunk begin line number
----@return number # hunk end line number
+---Get hunk range
+---@param bufnr integer
+---@param extid integer
+---@return integer # Hunk begin line number
+---@return integer # Hunk end line number
 local function expose_hunk_region(bufnr, extid)
   local contents = vim.api.nvim_buf_get_extmark_by_id(bufnr, ns, extid, { details = true })
   local detail = contents[3]
@@ -161,8 +170,9 @@ local function expose_hunk_region(bufnr, extid)
   return contents[1], detail.end_row + 1
 end
 
----@param bufnr number Loclist bufnr
----@param markers number Extmark number
+---Apply the fix to the selected hunk
+---@param bufnr integer Loclist bufnr
+---@param markers table Extmarks
 ---@param selected string Selected diff-content
 local function pick_contents(bufnr, markers, selected)
   local hunk_begin, hunk_end = expose_hunk_region(bufnr, markers.id)
@@ -180,7 +190,7 @@ local function pick_contents(bufnr, markers, selected)
   local end_row = hunk_height == 0 and hunk_begin or hunk_begin + hunk_height - 1
   local end_col = hunk_height == 0 and 0 or vim.api.nvim_strwidth(contents[#contents])
 
-  update_loclist(end_row, selected)
+  update_selected_range(end_row, selected)
   vim.api.nvim_buf_set_lines(bufnr, hunk_begin, hunk_end, false, contents)
   vim.api.nvim_buf_set_extmark(bufnr, ns, hunk_begin, 0, {
     id = markers.id,
@@ -194,30 +204,33 @@ local function pick_contents(bufnr, markers, selected)
 
   ---Note: If you make multiple changes to different buffers without moving focus, the number of changes will
   --- be counted as one. This creates gaps in undo/redo, so multiple changes must be counted correctly.
-  vim.api.nvim_command('wincmd p|wincmd p')
+  vim.cmd('wincmd p|wincmd p')
 end
 
+---Apply undo/redo to the filewin
 ---@param command string `undo` or `redo`
 local function youth_memories(command)
   modify_loclist(function()
-    vim.api.nvim_command(command)
+    vim.cmd(command)
   end)
 
   adjust_filewin()
   local winid = vim.fn.getloclist(0, { filewinid = 0 }).filewinid
   vim.api.nvim_win_call(winid, function()
-    vim.api.nvim_command(command)
+    vim.cmd(command)
   end)
 end
 
----@param key string Keys to send filewin
+---Send keystrokes to the filewin
+---@param key string Keys to send to filewin
 local function sendkey_filewin(key)
   local winid = vim.fn.getloclist(0, { filewinid = 0 }).filewinid
   vim.api.nvim_win_call(winid, function()
-    vim.api.nvim_command('exe "normal ' .. key .. '"')
+    vim.cmd(string.format('exe "normal %s"', key))
   end)
 end
 
+---Temporary command for filewin synchronization
 local function syncview_command()
   vim.api.nvim_buf_create_user_command(0, 'MMMugLoclistSyncview', function(opts)
     local row = current_line(0)
@@ -232,6 +245,11 @@ local function syncview_command()
   end, { nargs = '?', count = true })
 end
 
+---Remove MugConflict specification from buffers
+---@param bufnr integer Buffer number to detach
+---@param files table<integer,string> Conflict file names
+---@param swb string Value of the switchbuf
+---@param cm_hl integer Value of vim.g.conflict_marker_enable_highlight
 local function on_detach(bufnr, files, swb, cm_hl)
   vim.api.nvim_create_autocmd({ 'BufWipeout' }, {
     group = 'mug',
@@ -241,7 +259,7 @@ local function on_detach(bufnr, files, swb, cm_hl)
       buffers, loclist = {}, {}
       vim.g.mug_loclist_loaded = nil
 
-      vim.api.nvim_set_option('switchbuf', swb)
+      vim.api.nvim_set_option_value('switchbuf', swb, { scope = 'global' })
 
       if cm_hl == 1 then
         vim.api.nvim_set_var('conflict_marker_enable_highlight', cm_hl)
@@ -253,7 +271,7 @@ local function on_detach(bufnr, files, swb, cm_hl)
 
         if vim.api.nvim_buf_get_option(nr, 'modified') then
           vim.api.nvim_buf_call(nr, function()
-            vim.api.nvim_command('silent edit!')
+            vim.cmd('silent edit!')
           end)
         end
       end
@@ -262,7 +280,8 @@ local function on_detach(bufnr, files, swb, cm_hl)
   })
 end
 
-local function commit_message()
+---Suggest a commit after conflicts are resolved
+local function suggest_commit()
   local choice = util.confirm(
     'Conflict resolved. Continue merging and create commit now.',
     'Edit commit-message\nUse default commit-message\nCancel',
@@ -271,14 +290,13 @@ local function commit_message()
   )
 
   if choice < 3 then
-    vim.api.nvim_command('tabclose')
+    vim.cmd.tabclose()
     local pwd = util.pwd()
 
     if choice == 1 then
       require('mug.commit').commit_buffer('continue')
     elseif choice == 2 then
-      local merge_msg = pwd .. '/.git/MERGE_MSG'
-
+      local merge_msg = string.format('%s/.git/MERGE_MSG', pwd)
       local stdout, err =
         job.await(util.gitcmd({ cmd = 'commit', opts = { '--cleanup=strip', '--file=' .. merge_msg } }))
       util.notify(stdout, HEADER, err, false)
@@ -290,6 +308,7 @@ local function commit_message()
   end
 end
 
+---Apply MugConflict specification to buffers
 ---@param files table Conflict files
 local function on_attach(files)
   vim.api.nvim_buf_set_var(0, 'toggle_syncview', true)
@@ -301,7 +320,7 @@ local function on_attach(files)
       return
     end
 
-    vim.api.nvim_command('tabclose')
+    vim.cmd.tabclose()
   end, 'Close MugConflict')
   map.buf_set(true, 'n', 'w', function()
     do
@@ -313,7 +332,7 @@ local function on_attach(files)
         if vim.api.nvim_buf_get_option(nr, 'modified') then
           modified = true
           vim.api.nvim_buf_call(nr, function()
-            vim.api.nvim_command('silent update')
+            vim.cmd('silent update')
           end)
         end
       end
@@ -343,16 +362,16 @@ local function on_attach(files)
       end
 
       if #get_conflict_files() == 0 then
-        commit_message()
+        suggest_commit()
       else
-        vim.api.nvim_command('tabclose')
+        vim.cmd.tabclose()
       end
     end)
   end, 'Stage and commit')
   map.buf_set(true, 'n', '^', function()
-    local isSync = not vim.b.toggle_syncview
-    vim.api.nvim_buf_set_var(0, 'toggle_syncview', isSync)
-    util.notify('Syncview=' .. tostring(isSync), HEADER, 2)
+    local is_sync = not vim.b.toggle_syncview
+    vim.api.nvim_buf_set_var(0, 'toggle_syncview', is_sync)
+    util.notify(string.format('Syncview=%s', tostring(is_sync)), HEADER, 2)
   end, 'toggle syncview')
   map.buf_set(true, 'n', '<C-r>', function()
     youth_memories('redo')
@@ -362,6 +381,7 @@ local function on_attach(files)
   end, 'Undo')
   map.buf_set(true, 'n', 'gg', function()
     set_cursor(0, 1)
+
     if vim.b.toggle_syncview then
       adjust_filewin()
     end
@@ -408,13 +428,14 @@ local function on_attach(files)
   end, 'Toggle position between ours and theirs')
 end
 
----@param bufnr number Loclist filewin number
----@param name string Highlight name
----@param b number Hunk begin line number
----@param e number Hunk end line number
----@param priority number Extmark priority
+---Set extmark to the filewin
+---@param bufnr integer Loclist filewin number
+---@param name string Hlgroup
+---@param b integer Hunk begin line number
+---@param e integer Hunk end line number
+---@param priority integer Extmark priority
 ---@param beacon? boolean Highlight line number
----@return number|nil # Extmark id of hunk region
+---@return integer|nil # Extmark id of hunk region
 local function set_extmark(bufnr, name, b, e, priority, beacon)
   local contents = vim.api.nvim_buf_get_lines(bufnr, e - 1, e, true)
   local len = e == '' and 0 or vim.api.nvim_strwidth(contents[1])
@@ -432,9 +453,10 @@ local function set_extmark(bufnr, name, b, e, priority, beacon)
   return vim.api.nvim_buf_set_extmark(bufnr, ns, b - 1, 0, opts)
 end
 
----@param bufnr number Loclist filewin number
+---Set highlighting for conflict ranges in the filewin
+---@param bufnr integer Loclist filewin number
 ---@param lnum table Hunk contents
----@return table {id: number, _ours: number, _theirs: number, ours: table, base: table, theirs: table }
+---@return table # `{id: integer, _ours: integer, _theirs: integer, ours: table, base: table, theirs: table }`
 local function prepare_hunks(bufnr, lnum)
   local ours = vim.api.nvim_buf_get_lines(bufnr, lnum._begin, lnum._anc - 1, false)
   local base = vim.api.nvim_buf_get_lines(bufnr, lnum._anc, lnum._sep - 1, false)
@@ -451,6 +473,7 @@ local function prepare_hunks(bufnr, lnum)
   return { id = extid, _ours = lnum._begin + 1, _theirs = lnum._sep + 1, ours = ours, base = base, theirs = theirs }
 end
 
+---Expand conflict file to the filewin
 ---@param filename string Name of the conflicted file
 local function load_buffers(filename)
   local bufnr = vim.fn.bufnr(filename)
@@ -483,7 +506,8 @@ local function load_buffers(filename)
 
       hunk_info = prepare_hunks(bufnr, lnum)
       hunks[hunk_info.id] = hunk_info
-      loc_line = filename .. ':' .. lnum._begin .. '-' .. lnum._end .. ':' .. hunk_info.id .. ','
+      loc_line = string.format('%s:%s-%s:%s,', filename, lnum._begin, lnum._end, hunk_info.id)
+      -- loc_line = filename .. ':' .. lnum._begin .. '-' .. lnum._end .. ':' .. hunk_info.id .. ','
       table.insert(loclist, loc_line)
     end
   end
@@ -492,6 +516,7 @@ local function load_buffers(filename)
   buffers[bufnr] = hunks
 end
 
+---Set conflict files to arglocal
 ---@return table files # Conflict file names
 local function arglist()
   local files = get_conflict_files()
@@ -510,24 +535,26 @@ local function arglist()
     end
   end
 
-  vim.api.nvim_command('silent arglocal ' .. table.concat(files_esc, ' '))
+  vim.cmd('silent arglocal ' .. table.concat(files_esc, ' '))
 
   return files
 end
 
+---Hide loclist columns
 ---@param nonumber? boolean Disable column of line number
 local function hide_column(nonumber)
-  vim.api.nvim_win_set_option(0, 'signcolumn', 'no')
-  vim.api.nvim_win_set_option(0, 'foldcolumn', '0')
+  vim.api.nvim_set_option_value('signcolumn', 'no', { win = 0 })
+  vim.api.nvim_set_option_value('foldcolumn', '0', { win = 0 })
 
   if nonumber then
-    vim.api.nvim_win_set_option(0, 'number', false)
-    vim.api.nvim_win_set_option(0, 'relativenumber', false)
+    vim.api.nvim_set_option_value('number', false, { win = 0 })
+    vim.api.nvim_set_option_value('relativenumber', false, { win = 0 })
   end
 end
 
+---Open loclist
 ---@param position string|nil Loclist window position
----@return number # Loclist buffer number
+---@return integer # Loclist buffer number
 local function open_loclist(position)
   local winsize = 36
   position = position or _G.Mug.loclist_position
@@ -538,8 +565,8 @@ local function open_loclist(position)
     position = 'left'
   end
 
-  vim.api.nvim_command(tbl.positions[position] .. winsize .. 'lwindow|clearjumps')
-  vim.api.nvim_buf_set_option(0, 'bufhidden', 'wipe')
+  vim.cmd(tbl.positions[position] .. winsize .. 'lwindow|clearjumps')
+  vim.api.nvim_set_option_value('bufhidden', 'wipe', { scope = 'local' })
   vim.api.nvim_buf_set_name(0, 'Mug://conflict')
   hide_column(_G.Mug.loclist_disable_number)
   vim.api.nvim_set_var('mug_loclist_loaded', vim.api.nvim_get_current_win())
@@ -547,30 +574,31 @@ local function open_loclist(position)
   return vim.api.nvim_get_current_buf()
 end
 
+---Open MugConflict specification loclist
 ---@param position string|nil Loclist window location
 M.loclist = function(position)
-  vim.api.nvim_command('-tabnew')
-  vim.api.nvim_buf_set_option(0, 'bufhidden', 'wipe')
+  vim.cmd('-tabnew')
+  vim.api.nvim_set_option_value('bufhidden', 'wipe', { scope = 'local' })
 
   local conflict_files = arglist()
 
   if #conflict_files == 0 then
     util.notify('There was no conflict', HEADER, 2)
-    vim.api.nvim_command('tabclose')
+    vim.cmd.tabclose()
 
     return
   end
 
-  local swb = vim.api.nvim_get_option('switchbuf')
+  local swb = vim.api.nvim_get_option_value('switchbuf', { scope = 'global' })
   local cm_hl = vim.g.conflict_marker_enable_highlight
 
   if cm_hl == 1 then
     vim.api.nvim_set_var('conflict_marker_enable_highlight', '0')
   end
 
-  vim.api.nvim_set_option('switchbuf', 'uselast')
+  vim.api.nvim_set_option_value('switchbuf', 'uselast', { scope = 'global' })
   vim.api.nvim_win_set_hl_ns(0, ns)
-  vim.api.nvim_command('silent argdo! edit!')
+  vim.cmd('silent argdo! edit!')
 
   buffers = {}
 
@@ -578,10 +606,10 @@ M.loclist = function(position)
     load_buffers(v)
   end
 
-  vim.api.nvim_command('silent lfirst|clearjumps|normal ' .. winpos)
+  vim.cmd('silent lfirst|clearjumps|normal ' .. winpos)
 
-  if not vim.api.nvim_win_get_option(0, 'signcolumn') then
-    vim.api.nvim_win_set_option(0, 'signcolumn', true)
+  if vim.api.nvim_get_option_value('signcolumn', { win = 0 }) == 'no' then
+    vim.api.nvim_set_option_value('signcolumn', 'yes', { win = 0 })
   end
 
   local locnr = open_loclist(position)
@@ -590,24 +618,26 @@ M.loclist = function(position)
   on_detach(locnr, conflict_files, swb, cm_hl)
 end
 
+---Set cursor position on screen in the filewin
 local function filewin_adjust_key()
   local key = { upper = 'zt', center = 'zz', lower = 'zb' }
   winpos = key[_G.Mug.filewin_indicate_position] or winpos
 end
 
+---Close MugConflict specification loclist
 local function close_loclist()
   if vim.g.mug_loclist_loaded then
     local id = tonumber(vim.g.mug_loclist_loaded)
     vim.api.nvim_win_call(id, function()
-      vim.api.nvim_command('tabclose')
+      vim.cmd.tabclose()
     end)
   else
     local bufs = vim.api.nvim_list_bufs()
 
     for _, bufnr in ipairs(bufs) do
-      if vim.api.nvim_buf_get_option(bufnr, 'filetype') == 'qf' then
+      if vim.api.nvim_get_option_value('filetype', { buf = bufnr }) == 'qf' then
         vim.fn.setloclist(0, {}, 'r')
-        vim.api.nvim_command('lclose')
+        vim.cmd.lclose()
         break
       end
     end

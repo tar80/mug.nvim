@@ -20,7 +20,7 @@ Mug._ow('remote_url', test_url)
 
 describe('do mkrepo', function()
   Mug._ow('loglevel', 0)
-  vim.cmd('MugMkrepo ' .. temp_dir)
+  vim.cmd.MugMkrepo(temp_dir)
 
   vim.wait(200, function()
     return false

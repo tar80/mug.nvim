@@ -11,20 +11,15 @@ local HEADER, NAMESPACE = 'mug/term', 'MugTerm'
 local positions = util.tbl_merges(tbl.positions, { float = 'float' })
 local term_handle = 0
 local columns = { foldcolumn = vim.NIL, signcolumn = vim.NIL, number = vim.NIL, relativenumber = vim.NIL }
-local store_columns = vim.deepcopy(columns)
-local discolumns = {
-  foldcolumn = '0',
-  signcolumn = 'no',
-  number = false,
-  relativenumber = false,
-}
+local stored_columns = vim.deepcopy(columns)
+local discolumns = { foldcolumn = '0', signcolumn = 'no', number = false, relativenumber = false }
 
 ---@class Mug
----@filed term_shell string Specifies the shell to use with MugTerm
+---@field term_shell string Specifies the shell to use with MugTerm
 ---@field term_position string Specifies the position of the buffer
----@filed term_disable_columns All columns are disabled
----@filed term_nvim_pseudo boolean Do not display new nvim instance on MugTerm
----@filed term_nvim_opener string Specifies the position when opening a buffer from MugTerm
+---@field term_disable_columns boolean All columns are disabled
+---@field term_nvim_pseudo boolean Do not display new nvim instance on MugTerm
+---@field term_nvim_opener string Specifies the position when opening a buffer from MugTerm
 ---@field term_height number
 ---@field term_width number
 -- _G.Mug._def('term_shell', vim.api.nvim_get_option('shell'), true)
@@ -35,32 +30,33 @@ _G.Mug._def('term_nvim_opener', 'tabnew', true)
 _G.Mug._def('term_height', 1, true)
 _G.Mug._def('term_width', 0.9, true)
 
----@param display boolean Has columns
----@param set? boolean Overwrite store_columns
-local function display_columns(display, set)
+---Update display columns
+---@param display boolean Display columns
+---@param overwrite? boolean Overwrite "stored_columns"
+local function display_columns(display, overwrite)
   if not _G.Mug.term_disable_columns then
     return
   end
 
-  local t = display and store_columns or discolumns
-  local wo = vim.wo
+  local t = display and stored_columns or discolumns
 
   for k, v in pairs(t) do
-    if set then
-      store_columns[k] = wo[k]
-    elseif v ~= wo[k] then
-      wo[k] = v
+    if overwrite then
+      stored_columns[k] = vim.wo[k]
+    elseif v ~= vim.wo[k] then
+      vim.wo[k] = v
     end
   end
 end
 
----@param bufnr number Terminal-bufffer number
+---Apply the MugTerm specification
+---@param bufnr integer Terminal-bufffer number
 local function on_attach(bufnr)
   local term_id_bufenter = vim.api.nvim_create_autocmd({ 'BufEnter' }, {
     group = 'mug',
     buffer = bufnr,
     callback = function()
-      vim.api.nvim_command('startinsert')
+      vim.cmd.startinsert()
     end,
     desc = 'Each time you enter the buffer, you start in insert-mode',
   })
@@ -80,12 +76,13 @@ local function on_attach(bufnr)
       vim.api.nvim_del_autocmd(term_id_bufenter)
       vim.api.nvim_del_autocmd(term_id_bufreadpre)
       term_handle = 0
-      store_columns = vim.deepcopy(columns)
+      stored_columns = vim.deepcopy(columns)
     end,
     desc = 'Remove autocmd set in MugTerm',
   })
 end
 
+---Create new buffer
 local function create_window(count, pos)
   if count == 0 then
     count = ''
@@ -93,16 +90,20 @@ local function create_window(count, pos)
     count = pos:find('vertical', 1, true) and math.max(20, count) or math.max(3, count)
   end
 
-  vim.api.nvim_command('silent ' .. pos .. count .. 'new')
+  vim.cmd(string.format('silent %s%snew', pos, count))
 end
 
+---Create buffer of the MugTerm
+---@param pos 'float'|'top'|'bottom'|'left'|'right' Position of the terminal buffer
+---@param count integer Size of the terminal buffer
+---@param cmd string[] Oneshot command to run in the terminal buffer
 local function term_buffer(pos, count, cmd)
   local bufnr, handle
-  cmd = table.concat(cmd, ' ')
+  local cmd_str = table.concat(cmd, ' ')
 
   if pos == 'float' then
     handle = float.term({
-      cmd = cmd,
+      cmd = cmd_str,
       title = NAMESPACE,
       height = _G.Mug.term_height,
       width = _G.Mug.term_width,
@@ -110,7 +111,7 @@ local function term_buffer(pos, count, cmd)
     }).handle
   else
     create_window(count, pos)
-    util.termopen(cmd)
+    util.termopen(cmd_str)
     util.nofile(true, 'wipe', 'terminal')
     display_columns(false)
 
@@ -120,13 +121,20 @@ local function term_buffer(pos, count, cmd)
     on_attach(bufnr)
   end
 
-  vim.api.nvim_buf_set_option(0, 'filetype', 'terminal')
-  vim.api.nvim_command('clearjumps|startinsert')
+  vim.api.nvim_set_option_value('filetype', 'terminal', { buf = 0 })
+  vim.cmd('clearjumps|startinsert')
 
   return handle
 end
 
+
+---Expand command arguments
+---@generic T table Table of the MugTerm args
+---@param fargs T
+---@return string # Location of the MugTerm
+---@return T
 local function get_args(fargs)
+  ---@type string|nil
   local pos = positions[fargs[1]]
 
   if not pos then
@@ -138,6 +146,8 @@ local function get_args(fargs)
   return pos, fargs
 end
 
+---Get the servername of the current instance
+---@return string # servername
 local function get_server()
   local s = vim.api.nvim_get_vvar('servername')
 
@@ -148,6 +158,10 @@ local function get_server()
   return s
 end
 
+---Open MugTerm
+---@param count integer Size of the terminal buffer
+---@param bang boolean Has bang
+---@param fargs table Table of the arguments
 M.open = function(count, bang, fargs)
   if float.focus(term_handle) then
     return

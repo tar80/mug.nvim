@@ -16,6 +16,7 @@ local HEADER, NAMESPACE = 'mug/rebase', 'MugRebase'
 local float_handle = 0
 local item_count = 1
 local select_item = {}
+---@type integer
 local ns_select = vim.api.nvim_create_namespace(NAMESPACE)
 
 ---@type function|nil User additional keymaps for rebase buffer
@@ -47,24 +48,23 @@ hl.record('MugLogDate', { ns = 0, hl = { link = 'Statement' } })
 hl.record('MugLogOwner', { ns = 0, hl = { link = 'Conditional' } })
 hl.record('MugLogHead', { ns = 0, hl = { link = 'Keyword' } })
 
-local select_hl = {
-  squash = 'MugRebaseSquash',
-  fixup = 'MugRebaseFixup',
-}
+local select_hl = { squash = 'MugRebaseSquash', fixup = 'MugRebaseFixup' }
 
+---Make a confirm and get the result
 ---@param msg string
 ---@return boolean # Whether to continue
-local function cont(msg)
+local function ask_continue(msg)
   local answer = util.confirm(msg, 'Yes\nNo', 1, HEADER)
   return answer == 1
 end
 
----@return number # Preview window id
+---Get ID of the preview window
+---@return integer # Preview window id
 local function preview_winid()
   local winlist = vim.api.nvim_list_wins()
 
   for _, v in ipairs(winlist) do
-    if vim.api.nvim_win_get_option(v, 'previewwindow') then
+    if vim.api.nvim_get_option_value('previewwindow', { win = v }) then
       return v
     end
   end
@@ -72,6 +72,7 @@ local function preview_winid()
   return 0
 end
 
+---Open preview window
 ---@param direction? string Direction to open the preview-window
 local function open_preview(direction)
   direction = direction or _G.Mug.rebase_preview_pos
@@ -83,8 +84,9 @@ local function open_preview(direction)
   end
 end
 
----@param key string Mapping key
----@param winid number Preview-window id
+---Send keystrokes to the preview window
+---@param key string Send key
+---@param winid integer ID of the preview window
 local function sendkey_preview(key, winid)
   if not winid then
     winid = preview_winid()
@@ -95,14 +97,32 @@ local function sendkey_preview(key, winid)
   end
 
   vim.api.nvim_win_call(winid, function()
-    vim.api.nvim_command('exe "normal ' .. key .. '"')
+    vim.api.nvim_command(string.format('exe "normal %s"', key))
   end)
 end
 
+---Remove MugRebase specification
+---@param bufnr integer Buffer number to detach
+local function on_detach(bufnr)
+  vim.api.nvim_create_autocmd({ 'BufWipeout' }, {
+    group = 'mug',
+    buffer = bufnr,
+    once = true,
+    callback = function()
+      patch.close()
+    end,
+    desc = 'Detach rebase client buffer',
+  })
+end
+---Set keymaps to the client server
 local function map_to_server()
   require('mug.rpc.client').post_setup_buffer(function()
+    local bufnr = vim.api.nvim_win_get_buf(0)
     local syncview = false
+    ---@type integer
     local winid
+
+    on_detach(bufnr)
 
     map.buf_set(true, 'n', '<C-d>', function()
       sendkey_preview('\\<C-d>', winid)
@@ -121,14 +141,14 @@ local function map_to_server()
       util.notify('Syncview ' .. tostring(syncview), HEADER, 2)
     end, 'Toggle syncview')
     map.buf_set(true, 'n', 'j', function()
-      vim.api.nvim_command('normal! j')
+      vim.cmd.normal({ 'j', bang = true })
 
       if syncview then
         open_preview()
       end
     end, 'Sync preview down')
     map.buf_set(true, 'n', 'k', function()
-      vim.api.nvim_command('normal! k')
+      vim.cmd.normal({ 'k', bang = true })
 
       if syncview then
         open_preview()
@@ -153,6 +173,7 @@ local function map_to_server()
   end)
 end
 
+---Setart client server
 ---@return string # Server address
 local function start_server()
   local address = vim.api.nvim_get_vvar('servername')
@@ -164,6 +185,7 @@ local function start_server()
   return address
 end
 
+---Open rebase buffer
 local function rebase_buffer(selected, options, hash_rb)
   local server = start_server()
 
@@ -182,7 +204,8 @@ local function rebase_buffer(selected, options, hash_rb)
   end)
 end
 
----@param target string Autosquash type. `squash` or `fixup`
+---Set extmark to current line
+---@param target string Autosquash type. `"squash"` or `"fixup"`
 local function select_this(target)
   local row = vim.api.nvim_win_get_cursor(0)[1]
 
@@ -201,6 +224,7 @@ local function select_this(target)
   extmark.select_line(row, 0, ns_select, select_item, select_hl[target])
 end
 
+---Open rebase buffer with the commit pointed to by the current line as the starting point
 ---@param options table Git rebase options
 local function rebase_this(options)
   local row = vim.api.nvim_win_get_cursor(0)[1]
@@ -208,7 +232,7 @@ local function rebase_this(options)
   local hash_rb = vim.api.nvim_get_current_line():sub(1, 7)
 
   if not selected then
-    if not cont('Is it okay to rebase on ' .. hash_rb) then
+    if not ask_continue('Is it okay to rebase on ' .. hash_rb) then
       return
     end
   else
@@ -220,7 +244,7 @@ local function rebase_this(options)
       return
     end
 
-    if not cont(string.format('Create commit "%s! %s" and run rebase -i?', mode, hash_as)) then
+    if not ask_continue(string.format('Create commit "%s! %s" and run rebase -i?', mode, hash_as)) then
       select_item = {}
       vim.api.nvim_buf_clear_namespace(0, ns_select, 0, -1)
       return
@@ -262,12 +286,16 @@ local function float_win_map(staged, options)
   end, 'Clear select line')
 end
 
+---Set keymaps to the floating window
+---@param stdout string[] git log stdout
+---@param stats table worktree state
+---@param options table command arguments
 local function float_win(stdout, stats, options)
   local name = vim.b.mug_branch_name
   local staged = stats.s
 
   float_handle = float.open({
-    title = NAMESPACE .. ' interactive',
+    title = string.format('%s interactive', NAMESPACE),
     height = 3,
     width = 0.4,
     border = 'rounded',
@@ -275,7 +303,7 @@ local function float_win(stdout, stats, options)
       return stdout
     end,
     post = function()
-      vim.api.nvim_buf_set_option(0, 'modifiable', false)
+      vim.api.nvim_set_option_value('modifiable', false, { buf = 0 })
       syntax.log()
       syntax.rebase()
       float_win_map(staged, options)
@@ -292,7 +320,8 @@ local function float_win(stdout, stats, options)
   vim.b.mug_branch_stats = stats
 end
 
----@return string # Branchspec `<upstream>..HEAD` or `HEAD`
+--Detect upstream branch name
+---@return string # Branchspec `"<upstream>..HEAD"` or `"HEAD"`
 local function detect_upstream()
   local branches = comp.branches()
   local spec
@@ -307,26 +336,28 @@ local function detect_upstream()
   return spec and spec or 'HEAD'
 end
 
+---Get git log
 ---@param treeish string Specify upstream branch name
----@return table|nil # Git log per lines
+---@return table # Git log stdout
 local function get_git_log(treeish)
-  local format = string.format('%s %s', '%h', _G.Mug.rebase_log_format)
-  local max_log = 50
+  local max_log = string.format('-n%s', 50)
+  local format = string.format('--format=%%h %s', _G.Mug.rebase_log_format)
   local branchspec = treeish or detect_upstream()
   local cmdline = util.gitcmd({
     noquotepath = true,
     cmd = 'log',
-    opts = { '-n' .. max_log, '--no-color', '--format=' .. format, branchspec },
+    opts = { max_log, '--no-color', format, branchspec },
   })
 
   return vim.fn.systemlist(cmdline)
 end
 
+--Adjust git sub-command options
 ---@param sign string Specifies gpg-sign
 ---@param stash boolean Enable autostash
 ---@param fargs table Rabese options
----@return string # Adjusted rebase options
----@return table # Adjusted rebase options
+---@return string # Adjusted git log options
+---@return table # Adjusted git rebase options
 local function adjust_options(sign, stash, fargs)
   local treeish
   local opts = { '--interactive' }
@@ -352,11 +383,17 @@ local function adjust_options(sign, stash, fargs)
   return treeish, vim.list_extend(opts, fargs)
 end
 
+---Set user-defined keymaps
 ---@param callback function User defined keymaps
 M.rebase_map = function(callback)
   addinional_maps = callback
 end
 
+---Open the MugRebase floating window
+---@param name string Suffix of the MugRebase. `""`|`"sign"`
+---@param stats table Wroktree state
+---@param bang boolean Has bang
+---@param fargs table command arguments
 M.rebase_i = function(name, stats, bang, fargs)
   if float.focus(float_handle) then
     return
@@ -381,8 +418,9 @@ M.rebase_i = function(name, stats, bang, fargs)
   float_win(stdout, stats, options)
 end
 
+---Run MugRebase
 local function middle_of_rebase(pwd, opts)
-  local rebase_head = pwd .. '/.git/rebase_merge'
+  local rebase_head = string.format('%s/.git/rebase_marge', pwd)
 
   for _, v in ipairs(comp_on_process) do
     if opts.args:find(v, 1, true) then
@@ -390,9 +428,9 @@ local function middle_of_rebase(pwd, opts)
         util.notify('There is no rebase in progress', HEADER, 3)
       elseif v == '--show-current-patch' then
         if package.loaded['mug.show'] then
-          vim.api.nvim_command('MugShow! git rebase ' .. v)
+          vim.cmd.MugShow({ 'git rebase', bang = true })
         else
-          vim.api.nvim_command('!git rebase ' .. v)
+          vim.cmd(string.format('!git rebase %s', v))
         end
       elseif v == '--edit-todo' then
         rebase_buffer(false, { v }, '')
@@ -401,7 +439,6 @@ local function middle_of_rebase(pwd, opts)
 
         if vim.v.shell_error == 0 then
           util.notify('Successful', HEADER, 2)
-          branch.branch_name(pwd)
         else
           util.notify(log, HEADER, 3)
         end
@@ -455,7 +492,8 @@ local function complist(_, l)
   return comp_rebase
 end
 
----User command "MugRebase"
+---MugRebase
+---@param name string Suffix of the MugRebase. `""`|`"sign"`
 local function mug_rebase(name)
   vim.api.nvim_create_user_command(NAMESPACE .. name, function(opts)
     local ok, pwd = util.has_repo(HEADER)

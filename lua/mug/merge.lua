@@ -7,12 +7,14 @@ local commit_buffer = require('mug.commit').commit_buffer
 local HEADER, NAMESPACE = 'mug/merge', 'MugMerge'
 local comp_on_process = { '--abort', '--continue', '--quit' }
 
+---Do git fetch
+---@param command string[] command line
 local function do_fetch(command)
   local stdout, err = {}, 2
 
   local function notify()
     if #stdout == 0 and err == 2 then
-      stdout = { 'Successful' }
+      stdout = { 'Success' }
     end
 
     table.remove(stdout, 1)
@@ -26,9 +28,10 @@ local function do_fetch(command)
   end, notify)
 end
 
----@param ff string Fast-forward or not. `` or `FF`
+---Do git merge
+---@param ff string Fast-forward or not. `""` or `"FF"`
 ---@param pwd string Current directory path
----@param command table Git command and options
+---@param command table Git merge options
 local function do_merge(ff, pwd, command)
   local stdout, err = {}, 2
 
@@ -40,13 +43,13 @@ local function do_merge(ff, pwd, command)
         local filepath = util.filepath()
 
         if filepath and util.interactive('Aborted. Reload current buffer?', HEADER, 'n') then
-          vim.api.nvim_command('edit! ' .. filepath)
+          vim.cmd.edit({filepath, bang = true})
         end
 
         return
       end
 
-      stdout = { 'Succeeded' }
+      stdout = { 'Success' }
       multi = false
     end
 
@@ -73,7 +76,7 @@ local function do_merge(ff, pwd, command)
 
           return nil
         elseif stdout[1] ~= 'Already up to date.' then
-          choice = util.confirm('Merge completed. Edit commit-message?', 'Yes\nNo', 1, HEADER, true)
+          choice = util.confirm('Merge completed. Edit commit-message?', 'Yes\nNo', 1, HEADER)
 
           if choice == 1 then
             commit_buffer('merged')
@@ -128,6 +131,8 @@ local function complist(_, l)
   return comp_merge
 end
 
+---Do the MugMerge
+---@param name string Suffix of the MugMerge. `""`|`"FF"`
 local function mug_merge(name)
   vim.api.nvim_create_user_command(NAMESPACE .. name, function(opts)
     local cmdspec = name == '' and '--no-ff' or '--ff-only'
@@ -137,7 +142,7 @@ local function mug_merge(name)
       return
     end
 
-    local merge_msg = pwd .. '/.git/MERGE_MSG'
+    local merge_msg = string.format('%s/.git/MERGE_MSG', pwd)
 
     for _, v in ipairs(comp_on_process) do
       if opts.args:find(v) then
@@ -181,7 +186,7 @@ vim.api.nvim_create_user_command(NAMESPACE .. 'To', function(opts)
   end
 
   local force = opts.bang and '--force' or ''
-  local branchspec = vim.b.mug_branch_name .. ':' .. opts.args
+  local branchspec = string.format('%s:%s', vim.b.mug_branch_name, opts.args)
 
   do_fetch(util.gitcmd({ cmd = 'fetch', noquotepath = false, opts = { force, '.', branchspec } }))
 end, {

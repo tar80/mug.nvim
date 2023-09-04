@@ -5,10 +5,10 @@ local stored_hl = {}
 ---@type function[]
 local stored_func = {}
 
----@alias ns number Namespace
+---@alias ns integer Namespace
 ---@alias hlname string Highlight name
 ---@alias ratio integer Percentage to increace or decreace
----@alias opts {ns: number, hl: table} Highlight options
+---@alias opts {ns: integer, hl: table} Highlight options
 
 ---@param int ratio
 ---@return integer # Incremental value
@@ -95,7 +95,7 @@ M.set_hl = function(name, options)
 end
 
 ---Update stored_hl
----@param items table Hlgroup settings
+---@param items table|nil Hlgroup settings
 M.customize = function(items)
   if not items then
     return

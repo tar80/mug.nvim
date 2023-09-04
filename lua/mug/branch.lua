@@ -6,10 +6,16 @@
 local util = require('mug.module.util')
 
 ---@class branch
----@field branch_name fun(path: string) : string
----@field branch_stats fun(root: string?, responce?: boolean, ignore?:boolean) : table
 local M = {}
 local HEADER = 'mug/branch'
+
+---@class Branch_cache
+---@field root? string Git repository root path
+---@field name? string Branch name
+---@field key? integer Key of branch cache
+---@field info? string Current state of branch
+---@field stats? {s: integer, u: integer, c: integer}
+---@type {[string]: Branch_cache}
 local branch_cache = {}
 local event_spec = {
   { detail = 'Rebase', att = 'file', parent = '/rabase-apply/rebasing', filename = '/HEAD' },
@@ -20,14 +26,16 @@ local event_spec = {
   { detail = 'Merging', att = 'file', parent = '/MERGE_HEAD', filename = '/HEAD' },
 }
 
----@param root string project-root path
----@return integer # cached hash of target branch
+---Make a unique key
+---@param root string Project root path
+---@return integer # Unique key of target branch
 local function branch_cache_key(root)
   return vim.fn.getftime(root .. '/.git/HEAD') + vim.fn.getftime(root .. '/.git/MERGE_HEAD')
 end
 
+---Read specified file contents
 ---@param filepath string
----@return table # A line-by-line table of file contents
+---@return string[] # Line-by-line table of file contents
 local function file_read(filepath)
   local handle = io.open(filepath, 'r')
   local contents = {}
@@ -67,7 +75,7 @@ local function branch_head(root, filepath, state)
           if lines[i]:find('checkout: moving from', 1, true) ~= nil then
             branch_name = lines[i]:match('to%s([^%s]+)'):sub(0, 7)
             state = 'Detached'
-            break;
+            break
           end
         end
       end
@@ -77,15 +85,18 @@ local function branch_head(root, filepath, state)
   return branch_name, state
 end
 
+---Get branch name and state
 ---@param root string Project root path
 ---@return string # Branch name
 ---@return string # Branch state
 local function get_branch_info(root)
-  local git_dir = root .. '/.git'
+  local git_dir = string.format('%s/.git', root)
   local add_info = ''
+  ---@type string
   local head_info;
 
   (function()
+    ---@type string, string
     local head_spec, head_file
 
     for _, v in ipairs(event_spec) do
@@ -110,12 +121,13 @@ local function get_branch_info(root)
       end
     end
 
-    head_info, add_info = branch_head(git_dir, git_dir .. '/HEAD', add_info)
+    head_info, add_info = branch_head(git_dir, string.format('%s/HEAD', git_dir), add_info)
   end)()
 
   return head_info, add_info
 end
 
+---Get worktree status
 ---@param root string Project root path
 ---@param chain boolean Child process of a branch_name()
 ---@param ignore? boolean Add option "--ignored"
@@ -129,6 +141,7 @@ local function get_branch_stats(root, chain, ignore)
   local ignored = ignore and '--ignored' or ''
   local cmdline =
     util.gitcmd({ wd = root, noquotepath = true, cmd = 'status', opts = { '-b', ignored, '--porcelain' } })
+  ---@type string|nil
   local stdout = util.get_stdout(table.concat(cmdline, ' '))
   local list = vim.split(stdout, '\n')
   stdout = nil
@@ -156,13 +169,11 @@ local function get_branch_stats(root, chain, ignore)
   return { s = staged, u = unstaged, c = conflicted }, list
 end
 
+---Set the repository status to local variables
 ---@param cwd string Current working directory
----@return string? # Git branch name
+---@return string # `cached`|`saved`|``
 M.branch_name = function(cwd)
-  local git_root = vim.fs.find('.git', {
-    type = 'directory',
-    upward = true,
-  })
+  local git_root = vim.fs.find('.git', { type = 'directory', upward = true })
 
   if #git_root ~= 0 then
     git_root = git_root[1]:sub(1, -6)
@@ -173,7 +184,7 @@ M.branch_name = function(cwd)
   local key = branch_cache_key(git_root)
   local result = 'cached'
 
-  if branch_cache[cwd] == nil or branch_cache[cwd].key ~= key then
+  if (branch_cache[cwd] == nil) or (branch_cache[cwd].key ~= key) then
     if vim.fn.isdirectory(git_root .. '/.git') == 0 then
       branch_cache[cwd] = { root = nil, name = nil, info = nil, key = key, stats = nil }
       result = ''
@@ -197,10 +208,11 @@ M.branch_name = function(cwd)
   return result
 end
 
+---Update the branch status
 ---@param root string? Project root path
 ---@param response? boolean Show response message
 ---@param ignore? boolean Add option "--ignored"
----@return table # Debug message or util.notify()
+---@return string[] # `git status stderr` or `error message`
 M.branch_stats = function(root, response, ignore)
   if not root then
     root = util.pwd()
@@ -210,7 +222,6 @@ M.branch_stats = function(root, response, ignore)
 
   if cached == nil then
     local msg = 'Not a git repository'
-
     if response then
       util.notify(msg, HEADER, 3)
     end
@@ -220,10 +231,11 @@ M.branch_stats = function(root, response, ignore)
 
   local stats, stdout = get_branch_stats(cached.root, false, ignore)
   vim.b.mug_branch_stats = stats
-  cached.stats = stats
+  branch_cache[root].stats = stats
 
   if response then
-    util.notify('Update index information', HEADER, 2)
+    local msg = 'Update index information'
+    util.notify(msg, HEADER, 2)
   end
 
   return stdout

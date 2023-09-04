@@ -9,10 +9,14 @@ local HEADER = 'mug/mkrepo'
 ---@field remote_url string Remote repository url
 _G.Mug._def('commit_initial_message', 'Initial commit', true)
 
+---Create a git repository and initialize it
+---@param root string Git repository root path
+---@param compared string Comparison result of root and cwd. `same`|`deffer`
+---@param contain boolean Has bang
 local function do_mkrepo(root, compared, contain)
   local log, result, err = {}, {}, 2
   local function log_table(title)
-    table.insert(log, title .. table.concat(result, ''))
+    table.insert(log, string.format('%s%s', title, table.concat(result, '')))
   end
   local function notify()
     util.notify(log, HEADER, err, true)
@@ -31,11 +35,11 @@ local function do_mkrepo(root, compared, contain)
     if not _G.Mug.remote_url then
       log_table('remote-add > failure: Mug.remote_url not set')
     else
-      local url = _G.Mug.remote_url .. '/' .. vim.fs.basename(root) .. '.git'
+      local url = string.format('%s/%s.git', _G.Mug.remote_url, vim.fs.basename(root))
       result, err = job.await(util.gitcmd({ wd = root, cmd = 'remote', opts = { 'add', 'origin', url } }))
 
       if err == 2 then
-        table.insert(log, 'remote-add > success: origin ' .. url)
+        table.insert(log, string.format('remote-add > success: origin %s', url))
       else
         log_table('remote-add > ')
       end
@@ -62,10 +66,10 @@ local function do_mkrepo(root, compared, contain)
       log_table('commit > success: ')
 
       if compared == 'differ' then
-        local ok = util.interactive("Change 'lcd' to the repository path you created?", HEADER, 'y')
+        local ok = util.interactive('Change "lcd" to the repository path you created?', HEADER, 'y')
 
         if ok then
-          vim.api.nvim_command('lcd ' .. root)
+          vim.cmd.lcd(root)
         end
       end
     else
@@ -88,20 +92,20 @@ vim.api.nvim_create_user_command('MugMkrepo', function(opts)
   local pathspec = util.normalize(path, '/'):gsub('/$', '')
 
   if pathspec ~= '' then
-    repo_root = pathspec:find('/', 1, true) and pathspec or root .. '/' .. pathspec
+    repo_root = pathspec:find('/', 1, true) and pathspec or string.format('%s/%s', root, pathspec)
   end
 
   local compared = root == repo_root and 'same' or 'differ'
-  root, pathspec = nil, nil
+  -- root, pathspec = nil, nil
 
   if vim.fn.isdirectory(repo_root .. '/.git') ~= 0 then
     return util.notify('Already exist', HEADER, 3)
   end
 
-  local ok = util.interactive('Create a repository in ' .. repo_root .. '?', HEADER, 'y')
+  local ok = util.interactive(string.format('Create a repository in %s?', repo_root), HEADER, 'y')
 
   if not ok then
-    return vim.api.nvim_command('redraw|echo')
+    return vim.cmd('redraw|echo')
   end
 
   do_mkrepo(repo_root, compared, opts.bang)

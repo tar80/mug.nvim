@@ -1,5 +1,6 @@
 local wd = vim.fn.expand("%:p:h:h")
 vim.opt.runtimepath:append(wd)
+---commands must be default name
 local edit_cmd = vim.fn.exists(':Edit')
 local file_cmd = vim.fn.exists(':File')
 local write_cmd = vim.fn.exists(':Write')

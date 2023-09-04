@@ -4,7 +4,8 @@ local branch_stats = require('mug.branch').branch_stats
 
 local HEADER = 'mug/files'
 
----@param wd string working directory
+---Run git mv and update the buffer
+---@param wd string Working directory
 ---@param oldname string Source
 ---@param newname string Destination
 ---@param force boolean Force move
@@ -21,15 +22,17 @@ local function do_move(wd, oldname, newname, force)
       util.notify(result, HEADER, err, false)
     else
       branch_stats()
-
       local old_bufnr = vim.api.nvim_get_current_buf()
-
-      vim.api.nvim_command('edit! ' .. wd .. '/' .. newname)
-      vim.api.nvim_command('silent bwipeout! ' .. old_bufnr)
+      vim.cmd.edit({ string.format('%s/%s', wd, newname), bang = true })
+      vim.cmd.bwipeout({old_bufnr, bang = true})
+      -- vim.cmd.bwipeout({old_bufnr, bang = true, {mods = {silent = true}}})
+      -- vim.cmd('edit! ' .. wd .. '/' .. newname)
+      -- vim.cmd('silent bwipeout! ' .. old_bufnr)
     end
   end)
 end
 
+---Run git rm
 ---@param wd string Working directory
 ---@param name string Remove target
 ---@param force boolean Whether to delete
@@ -53,6 +56,8 @@ local function do_remove(wd, name, force)
   end)
 end
 
+---Check update status and execute choices
+---@return boolean # Whether to continue the operation
 local function prepare()
   if not vim.bo.modified then
     return true
@@ -61,29 +66,31 @@ local function prepare()
   local choice = util.confirm('File has been modified', '&Stop\n&Continue\n&Write and continue', 1, HEADER)
 
   if choice == 0 then
-    vim.api.nvim_command('redraw|echo')
+    vim.cmd('redraw|echo')
 
     return false
   elseif choice == 3 then
-    vim.api.nvim_command('write')
-
-    return true
+    vim.cmd.write()
   end
+
+  return true
 end
 
+---Check if the path is correct
 ---@param wd string Working directory
----@param opts table User-command arguments
----@return boolean? # Whether to continue the operation
+---@param opts table User-defined command arguments
+---@return boolean # Whether to continue the operation
 local function path_verify(wd, opts)
   local pathspec = opts.args
 
   if pathspec:find('[\\/]') then
     pathspec = pathspec:gsub('^%.?[\\/]?(.+)[\\/].+', '%1')
 
-    if vim.fn.isdirectory(wd .. '/' .. pathspec) == 0 then
-      local choice = util.confirm(pathspec .. ' does not exist', '&Create and continue\n&Stop operation', 1, HEADER)
+    if vim.fn.isdirectory(string.format('%s/%s', wd, pathspec)) == 0 then
+      local choice =
+        util.confirm(string.format('%s does not exist', pathspec), '&Create and continue\n&Stop operation', 1, HEADER)
       if choice == 2 then
-        vim.api.nvim_command('redraw|echo')
+        vim.cmd('redraw|echo')
 
         return false
       end
@@ -93,7 +100,8 @@ local function path_verify(wd, opts)
   end
 
   if not opts.bang and util.file_exist(opts.args) then
-    util.notify(opts.args .. ' is exist', HEADER, 3)
+    local msg = string.format('%s is exist', opts.args)
+    util.notify(msg, HEADER, 3)
 
     return false
   end
@@ -117,7 +125,7 @@ vim.api.nvim_create_user_command('MugFileRename', function(opts)
     return
   end
 
-  wd = util.dirpath('/')
+  local wd = util.dirpath('/')
 
   if not path_verify(wd, opts) then
     return
@@ -139,7 +147,6 @@ vim.api.nvim_create_user_command('MugFileMove', function(opts)
     return
   end
 
-
   if not path_verify(wd, opts) then
     return
   end
@@ -156,7 +163,7 @@ vim.api.nvim_create_user_command('MugFileDelete', function(opts)
     return
   end
 
-  wd = util.dirpath('/')
+  local wd = util.dirpath('/')
   local name = vim.fn.expand('%:t')
 
   do_remove(wd, name, opts.bang)

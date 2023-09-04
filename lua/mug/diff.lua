@@ -10,6 +10,7 @@ local DIFF_URI = 'mug://cat-file/'
 ---@class Mug
 ---@field diff_position string Position of diff window
 
+---Apply MugDiff specification to buffer
 ---@param ... string Buffer number
 local function on_attach(...)
   for _, bufnr in ipairs({ ... }) do
@@ -20,8 +21,9 @@ local function on_attach(...)
   end
 end
 
----@param bufnr number Buffer number
----@param diffnr number Diff buffer number
+---Remove MugDiff specification from buffer
+---@param bufnr integer Buffer number
+---@param diffnr integer Diff buffer number
 local function on_detach(bufnr, diffnr)
   local exist = vim.api.nvim_get_autocmds({ group = 'mug', event = 'BufWipeout', buffer = diffnr })
 
@@ -49,9 +51,10 @@ local function on_detach(bufnr, diffnr)
   })
 end
 
+---Existence check of pathspec
 ---@param arg string Git cat-file pathspec
 ---@param options table Diff command arguments
----@return table|nil # {pos: string, treeish: string, path: stirng}
+---@return table|nil # {`pos`: string, `treeish`: string, `path`: stirng}
 local function catfile(arg, options)
   if util.file_exist(vim.fn.expand(arg)) then
     options.path = arg
@@ -64,9 +67,10 @@ local function catfile(arg, options)
   return nil
 end
 
----@param arg string Git cat-file treeish
+---Check and set tree-ish
+---@param arg string Git cat-file tree-ish
 ---@param options table Diff command arguments
----@return table # {pos: string, treeish: string, path: stirng}
+---@return table # {`pos`: string, `treeish`: string, `path`: stirng}
 local function treeish(arg, options)
   if util.file_exist(vim.fn.expand(arg)) then
     options.path = arg
@@ -77,9 +81,10 @@ local function treeish(arg, options)
   return options
 end
 
+---Ckech and set buffer position
 ---@param arg string Diff buffer position
 ---@param options table Diff command arguments
----@return table # {pos: string, treeish: string, path: stirng}
+---@return table # {`pos`: string, `treeish`: string, `path`: stirng}
 local function position(arg, options)
   local pos = arg:lower():gsub('%w+', tbl.positions)
 
@@ -92,6 +97,8 @@ local function position(arg, options)
   return options
 end
 
+---Determine buffer position
+---@return string # bufffer position
 local function window_position()
   local userspec = tbl.positions[_G.Mug.diff_position]
 
@@ -102,35 +109,42 @@ local function window_position()
   return userspec
 end
 
+---Normalize path and adjust root
 ---@param path string Comparison file path
 ---@return string # Adjusted comparison file path
 ---@return boolean # The comparison target is the same file
 local function adjust_path(path)
-  local cwd = util.pwd()
+  local current_file = util.filepath('/')
   local root = vim.fs.find('.git', { type = 'directory', upward = true })[1]
   root = root:gsub('/.git', '')
-  local current_file = util.filepath('/')
-  local compensate = ''
 
-  if cwd ~= root then
-    compensate = string.format('%s/', cwd:sub(#root + 2))
-  end
+  local path_ = vim.fn.expand(path)
 
-  path = vim.fn.expand(path)
-
-  if vim.fn.getftype(path) == 'link' then
+  if vim.fn.getftype(path_) == 'link' then
     ---NOTE: uv.fs_realpath() changes the path even when it is not a simlink
     --- resolve() returns the original path as is
-    path = vim.fn.resolve(path)
+    path_ = vim.fn.resolve(path_)
   end
 
-  path = util.conv_slash(path)
-  path = path:find(root, 1, true) and path:sub(#root + 2) or string.format('%s%s', compensate, path)
-  local is_same = path == current_file
+  path_ = util.conv_slash(path_)
+  path_ = (function()
+    if path_:find(root, 1, true) then
+      return path_:sub(#root + 2)
+    else
+      local cwd = util.pwd()
+      if cwd ~= root then
+        return string.format('%s/%s', cwd:sub(#root + 2), path_)
+      end
+      return path_
+    end
+  end)()
 
-  return path, is_same
+  local is_same = path_ == current_file
+
+  return path_, is_same
 end
 
+---Compare files
 ---@param name string Diff command name
 ---@param ... string Diff command arguments
 local function let_compare(name, ...)
@@ -157,19 +171,20 @@ local function let_compare(name, ...)
         branchspec = vim.b.mug_branch_name
       end
 
-      options.treeish = 'origin/' .. branchspec
-
+      options.treeish = string.format('origin/%s', branchspec)
       stdout, err = job.await(util.gitcmd({ cmd = 'branch', opts = { '-r', '--list', options.treeish } }))
 
       if #stdout == 0 then
-        util.notify('Remote ' .. options.treeish .. ' is not exist', HEADER, 3)
+        local msg = string.format('Remote %s is not exist', options.treeish)
+        util.notify(msg, HEADER, 3)
         return
       end
 
       stdout, _ = job.await(util.gitcmd({ cmd = 'fetch', opts = { 'origin', branchspec } }))
 
       if stdout[1]:find('fatal:', 1, true) then
-        util.notify('Cannot fetch ' .. options.treeish, HEADER, 2)
+        local msg = string.format('Cannot fetch %s', options.treeish)
+        util.notify(msg, HEADER, 2)
         return
       end
     end
@@ -185,9 +200,8 @@ local function let_compare(name, ...)
       end
     end
 
-    local refs = options.treeish .. ':' .. pathspec
-    local filename = DIFF_URI .. refs
-
+    local refs = string.format('%s:%s', options.treeish, pathspec)
+    local filename = string.format('%s%s', DIFF_URI, refs)
     stdout, err = job.await(util.gitcmd({ noquotepath = true, cmd = 'cat-file', opts = { '-p', refs } }))
 
     if err > 2 then
@@ -197,16 +211,14 @@ local function let_compare(name, ...)
 
     local bufnr = vim.api.nvim_get_current_buf()
     local handle = vim.api.nvim_get_current_win()
-
-    vim.api.nvim_command('silent ' .. options.pos .. 'new ' .. filename)
+    vim.cmd(string.format('silent %snew %s', options.pos, filename))
 
     local diffnr = vim.api.nvim_get_current_buf()
-
     util.nofile(true, 'wipe')
     vim.api.nvim_buf_set_lines(diffnr, 0, -1, false, stdout)
-    vim.api.nvim_command('diffthis')
+    vim.cmd.diffthis()
     vim.api.nvim_set_current_win(handle)
-    vim.api.nvim_command('diffthis')
+    vim.cmd.diffthis()
 
     on_attach(bufnr)
     on_attach(diffnr)

@@ -8,13 +8,15 @@ local M = {}
 local HEADER = 'mug/patch'
 local PATCH_URI = 'Mug://patch'
 
----@type table {bufnr: number, winid: number}
+---@type table {bufnr: integer, winid: integer}
 local preview_window = {}
 
 ---@class Mug
 ---@field patch_window_height number
 _G.Mug._def('patch_window_height', 20, true)
 
+---Post-processing when deleting the pleview window
+---@param bufnr integer ID of the preview window
 local function post_process(bufnr)
   vim.api.nvim_create_autocmd('BufWipeout', {
     group = 'mug',
@@ -26,52 +28,62 @@ local function post_process(bufnr)
   })
 end
 
+---Add keymaps to the MugCommit buffer
 local function maps_commit()
   map.buf_set(true, 'n', 'q', function()
-    vim.api.nvim_buf_set_option(0, 'buflisted', false)
-    vim.api.nvim_command('silent bwipeout')
+    vim.api.nvim_set_option_value('buflisted', false, { buf = 0 })
+    vim.cmd.bwipeout()
+    -- vim.cmd('silent bwipeout')
   end, 'Close patch buffer')
 
   vim.api.nvim_command('wincmd p')
 end
 
+---Set keymaps to the preview window
 local function maps_cached()
   map.buf_set(true, 'n', 'q', function()
-    vim.api.nvim_buf_set_option(0, 'buflisted', false)
-    vim.api.nvim_command('silent bwipeout')
+    vim.api.nvim_set_option_value('buflisted', false, { buf = 0 })
+    vim.cmd.bwipeout()
+    -- vim.cmd('silent bwipeout')
   end, 'Close patch buffer')
   map.buf_set(true, 'n', { 'gd', 'gD' }, function()
     M.open()
-  end, 'Close patch buffer')
+  end, 'Toggle patch buffer')
 end
 
+---Get the width of the current column
 local function column_width()
-  local get_win = vim.api.nvim_win_get_option
-  local width = get_win(0, 'signcolumn') == 'yes' and 2 or 0
+  local width = vim.api.nvim_get_option_value('signcolumn', { win = 0 }) == 'yes' and 2 or 0
   local numwidth = 0
-  width = width + tonumber(get_win(0, 'foldcolumn'))
+  width = width + tonumber(vim.api.nvim_get_option_value('foldcolumn', { win = 0 }))
 
-  if get_win(0, 'number') or get_win(0, 'relativenumber') then
-    numwidth = math.max(3, tonumber(get_win(0, 'numberwidth')))
+  if
+    vim.api.nvim_get_option_value('number', { win = 0 })
+    or vim.api.nvim_get_option_value('relativenumber', { win = 0 })
+  then
+    numwidth = math.max(3, tonumber(vim.api.nvim_get_option_value('numberwidth', { win = 0 })))
     width = width + numwidth
   end
 
   return width, numwidth
 end
 
+---@alias Preview_arguments {excmd: string, direction: string, width: integer, height?: integer, method: string }
+
+---Get contents of the preview window
 ---@param commitish string
----@param bufinfo table
----@param numwidth number
+---@param args Preview_arguments
+---@param numwidth integer
 ---@param hash string
----@return table # Stdout
-local function get_patch(commitish, bufinfo, numwidth, hash)
+---@return table stdout, integer loglevel
+local function get_patch(commitish, args, numwidth, hash)
   local opts = {
     '--cached',
     '--patch',
     '--no-color',
     '--no-ext-diff',
     '--compact-summary',
-    '--stat=' .. bufinfo.width - numwidth,
+    string.format('--stat=%s', args.width - numwidth),
     hash,
   }
   local cmd
@@ -86,10 +98,11 @@ local function get_patch(commitish, bufinfo, numwidth, hash)
   return job.await(util.gitcmd({ noquotepath = true, cmd = cmd, opts = opts }))
 end
 
+---Get startup arguments of the preview window
 ---@param commitish string Command mode
 ---@param position string Buffer position
----@param infowidth number Left column width
----@return table # {cmd: string, direction: string, width: number, method: string }
+---@param infowidth integer Left column width
+---@return Preview_arguments
 local function buffer_info(commitish, position, infowidth)
   local width = vim.api.nvim_win_get_width(0)
   local margin = commitish == 'commit' and 60 or 73
@@ -110,9 +123,10 @@ local function buffer_info(commitish, position, infowidth)
     }
 end
 
----@param treeish string Prints the diff for the specified commit
+---Expand commit contents to the preview window
+---@param treeish string Specified the commit
 ---@return boolean # Whether the buffer is loaded
-local function commit_loaded(treeish)
+local function expand_preview_contents(treeish)
   if preview_window[treeish] then
     local v = preview_window[treeish]
 
@@ -132,27 +146,28 @@ local function commit_loaded(treeish)
   return false
 end
 
----@param treeish string Prints the diff for the specified commit
----@param bufinfo table Window size informations
+---Toggle preview window
+---@param treeish string Specified commit
+---@param args Preview_arguments
 ---@return boolean # Whether the buffer is loaded
-local function cached_loaded(treeish, bufinfo)
+local function cached_loaded(treeish, args)
   local bufnr, winid
 
   if preview_window[treeish] then
     bufnr, winid = unpack(preview_window[treeish])
 
     if pcall(vim.api.nvim_win_get_option, winid, 'previewwindow') then
-      vim.api.nvim_command('pclose')
+      vim.cmd.pclose()
     else
-      vim.api.nvim_command(string.format('silent %s sbuffer %s', bufinfo.direction, bufnr))
+      vim.cmd(string.format('silent %s sbuffer %s', args.direction, bufnr))
       winid = vim.api.nvim_get_current_win()
       preview_window[treeish][2] = winid
 
-      vim.api.nvim_win_set_option(winid, 'previewwindow', true)
+      vim.api.nvim_set_option_value('previewwindow', true, { win = winid })
 
-      if bufinfo.method then
-        local range = bufinfo.height or bufinfo.width
-        vim.api[bufinfo.method](0, range)
+      if args.method then
+        local range = args.height or args.width
+        vim.api[args.method](0, range)
       end
     end
     return true
@@ -161,6 +176,7 @@ local function cached_loaded(treeish, bufinfo)
   return false
 end
 
+---Expand patch contents in preview window
 ---@param commitish string
 ---@param treeish string
 ---@param bufinfo table
@@ -176,15 +192,15 @@ local function patch_buffer(commitish, treeish, bufinfo, filename, stdout)
 
     vim.api.nvim_buf_set_name(bufnr, filename)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, stdout)
-    vim.api.nvim_command(string.format('silent %s %s %s %s', bufinfo.direction, range, bufinfo.excmd, filename))
-    vim.api.nvim_command('clearjumps|setfiletype git')
+    vim.cmd(string.format('silent %s %s %s %s', bufinfo.direction, range, bufinfo.excmd, filename))
+    vim.cmd('clearjumps|setfiletype git')
 
     winid = vim.api.nvim_get_current_win()
 
-    vim.api.nvim_win_set_option(winid, 'previewwindow', true)
-    vim.api.nvim_win_set_option(winid, 'foldcolumn', '0')
-    vim.api.nvim_win_set_option(winid, 'signcolumn', 'no')
-    vim.api.nvim_win_set_option(winid, 'number', false)
+    vim.api.nvim_set_option_value('previewwindow', true, { win = winid })
+    vim.api.nvim_set_option_value('foldcolumn', '0', { win = winid })
+    vim.api.nvim_set_option_value('signcolumn', 'no', { win = winid })
+    vim.api.nvim_set_option_value('number', false, { win = winid })
     util.nofile(true, 'hide', 'nofile')
     syntax_stats()
     maps()
@@ -206,7 +222,7 @@ local function patch_buffer(commitish, treeish, bufinfo, filename, stdout)
   end
 end
 
----Show diff with staged-files
+---Show git diff with staged-files
 ---@param position? string|nil Specify how to open the buffer. `top` `bottom` `left` `right`
 ---@param hash? string Specify tree-ish
 M.open = function(position, hash)
@@ -217,7 +233,7 @@ M.open = function(position, hash)
   position = tbl.positions[string.lower(position or 'bottom')]
   local colwidth, numwidth = column_width()
   local bufinfo = buffer_info(commitish, position, colwidth)
-  local loaded_buffer = commitish == 'commit' and commit_loaded or cached_loaded
+  local loaded_buffer = commitish == 'commit' and expand_preview_contents or cached_loaded
   local loaded = loaded_buffer(treeish, bufinfo)
 
   if loaded then
@@ -241,10 +257,11 @@ M.open = function(position, hash)
   end)
 end
 
+---Close the preview window
 M.close = function()
   for _, v in pairs(preview_window) do
     if pcall(vim.api.nvim_win_get_option, v[2], 'previewwindow') then
-      vim.api.nvim_command('silent bwipeout ' .. v[1])
+      vim.cmd.bwipeout(v[1])
     end
   end
 end

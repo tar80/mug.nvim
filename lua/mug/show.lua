@@ -36,14 +36,14 @@ local function define_type(literal)
 end
 
 ---Extract elements from literals and convert them to table
----@param literals string
+---@param arg string
 ---@return table
-local function str_to_tbl(literals)
+local function str_to_tbl(arg)
   local tbl = {}
-  literals = literals:gsub('^%s*[{[]%s*(.+)[}%]]%s*$', '%1')
+  arg = arg:gsub('^%s*[{[]%s*(.+)[}%]]%s*$', '%1')
 
-  if literals:find(',', 1, true) then
-    local t = vim.split(literals, ',', { plain = true })
+  if arg:find(',', 1, true) then
+    local t = vim.split(arg, ',', { plain = true })
 
     for _, v in ipairs(t) do
       if v:find('[{[]') then
@@ -55,8 +55,8 @@ local function str_to_tbl(literals)
         table.insert(tbl, define_type(vim.trim(v)))
       end
     end
-  elseif literals ~= '{}' and literals:match('%g+') then
-    tbl = { define_type(literals) }
+  elseif arg ~= '{}' and arg:match('%g+') then
+    tbl = { define_type(arg) }
   end
 
   return tbl
@@ -143,9 +143,9 @@ local function get_value(opts)
     return makeup_func(opts.args, 'fn')
   end
 
-  local exitcode, output = pcall(vim.api.nvim_exec, opts.args, {})
+  local ok, output = pcall(vim.api.nvim_exec, opts.args, {})
 
-  if not exitcode then
+  if not ok then
     return notify(output, HEADER, 3)
   end
 
@@ -195,7 +195,7 @@ user_command('show_command', function(opts)
   end
 
   float_handle = float.open({
-    title = NAMESPACE .. bang .. opts.args,
+    title = string.format('%s%s%s', NAMESPACE, bang, opts.args),
     height = 1,
     width = 0.3,
     border = 'rounded',

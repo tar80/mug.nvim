@@ -1,36 +1,18 @@
 ---@class util
----@field conv_slash fun(item: string) : string Change backslash to slash
----@field slash function Returns currently path separator
----@field normalize function Normalize path using crrently path separator
----@field pwd function Returns current working directory
----@field filepath function Normalize path of the file being edited
----@field dirpath function Normalize parent directory of the file being edited
----@field notify function Display notification
----@field interactive function Ask permission
----@field confirm function Confirm request a response
----@field tbl_merges function Merge multiple tables
----@field tbl_docking function Docking multiple elements
----@field file_exist function Check for file existence
----@field get_stdout function Get shell command stdout
----@field get_bufs function Extract specified element from all buffers
----@field has_repo function Returns whether the current file to the repository or not
----@field is_repo function Returns whether the specified path is a repository or not
----@field gitcmd function Returns git command and options as a table
----@field nofile function Apply settings as virtual buffer to buffer
----@field user_command function Register after adjusting the command name
----@field termopen function Open terminal as buffer
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
 local is_win = vim.fn.has('win32')
 
+---Convert backslash to slash
 ---@param item string String to convert
----@return string
+---@return string item
 M.conv_slash = function(item)
   return (item:gsub('\\', '/'))
 end
 
+---Returns the current path separator
 ---@return string # `slash` or `backslash`
-M.slash = function()
+M.get_sep = function()
   local s = '/'
 
   if has_shellslash then
@@ -40,10 +22,14 @@ M.slash = function()
   return s
 end
 
----@return string # path-separated normalization
+---Normalize the path using current path separator
+---@param path string Normalization target
+---@param sep? string Slash or backslash character-code
+---@return string # Normalized path
+---@return integer # Match count
 M.normalize = function(path, sep)
   if not sep or not sep:match('[/\\]') then
-    sep = M.slash()
+    sep = M.get_sep()
   end
 
   local target_chr = {
@@ -51,17 +37,22 @@ M.normalize = function(path, sep)
     ['\\'] = '/',
   }
 
+  ---NOTE: to maintain compatibility, we believe that drive letters in paths passed to the editor should be upper case
+  path = path:sub(1, 1):upper() .. path:sub(2)
+
   return path:gsub(target_chr[sep], sep)
 end
 
+---Returns the current working directory
 ---@return string # working directory path separated by slashes
 M.pwd = function()
   return vim.uv.cwd():gsub('\\', '/')
 end
 
+---Normalize path of the file being edited
 ---@param sep string? Path separator
 ---@param response? boolean Display notification
----@return string|nil # Fullpath of current file
+---@return string|nil # Normalized path of the current file
 M.filepath = function(sep, response)
   local path = vim.api.nvim_buf_get_name(0)
 
@@ -72,8 +63,9 @@ M.filepath = function(sep, response)
   return sep and M.normalize(path, sep) or path
 end
 
+---Normalize parent directory of the file being edited
 ---@param sep string? Path separator
----@return string # Parent directory path of current file
+---@return string # Parent directory path of the current file
 M.dirpath = function(sep)
   local path = vim.api.nvim_buf_get_name(0)
   path = path == '' and vim.uv.cwd() or path:gsub('^(.+)[/\\].*$', '%1')
@@ -81,58 +73,40 @@ M.dirpath = function(sep)
   return sep and M.normalize(path, sep) or path
 end
 
----If the highlight has a bold attribute,
----the characters at the end of the word are cut off, so add a space to deal with it
----@param highlight string Highlight group name
----@return string # Linewise tail spaces
-local function adjust_tail_blank(highlight)
-  local tbl = {}
-  tbl = vim.api.nvim_get_hl_by_name(highlight, false)
-  tbl = vim.tbl_keys(tbl)
-
-  return vim.tbl_contains(tbl, 'bold') and '  ' or ''
-end
-
 ---Format the message displayed in the prompt
----@param message table Prompt notification
----@param name string Function name used
----@param loglevel number Error level
+---@param message string[] Notification message
 ---@return string # Merged message
-local function merge_message(message, name, loglevel)
-  local tail_blank = '  '
+local function merge_message(message)
   local merged = ''
   local connect
-
-  if name == 'confirm' then
-    tail_blank = adjust_tail_blank('MoreMsg')
-  elseif loglevel == 3 then
-    tail_blank = adjust_tail_blank('WarningMsg')
-  end
 
   for _, v in ipairs(message) do
     if v:find('[', 1, true) == 1 and not v:find(']', 1, true) and v:find('%s$', 2) then
       connect = v
     elseif connect then
-      merged = merged .. connect .. v .. tail_blank .. '\n'
+      merged = string.format('%s%s%s\n', merged, connect, v)
+      -- merged = merged .. connect .. v .. tail_blank .. '\n'
       connect = nil
     else
-      merged = merged .. v .. tail_blank .. '\n'
+      merged = string.format('%s%s\n', merged, v)
+      -- merged = merged .. v .. tail_blank .. '\n'
     end
   end
 
   return merged
 end
 
+---Wrap vim.notify()
 ---@param message string|table Notification message
----@param title string Message-header
----@param loglevel number vim.log.levels
----@param multiline? boolean Whether to support multiple lines for error-message
----@return string|nil # Return message for debug
+---@param title string Message header
+---@param loglevel integer vim.log.levels
+---@param multiline? boolean Whether to support multiple lines for message
+---@return string|nil # Message for debug
 M.notify = function(message, title, loglevel, multiline)
   _G.Mug._ow('loglevel', loglevel)
 
   if type(message) == 'table' then
-    message = merge_message(message, 'notify', loglevel)
+    message = merge_message(message)
   end
 
   if vim.g.mug_debug then
@@ -142,8 +116,8 @@ M.notify = function(message, title, loglevel, multiline)
   local header = ''
 
   if not package.loaded['notify'] then
-    local concatenate = multiline and '  \n' or ' '
-    header = '[' .. title .. ']' .. concatenate
+    local concatenate = multiline and '\n' or ' '
+    header = string.format('[%s]%s', title, concatenate)
   end
 
   if is_win then
@@ -153,9 +127,10 @@ M.notify = function(message, title, loglevel, multiline)
   vim.notify(header .. vim.trim(message), loglevel, { title = title })
 end
 
+---Interactive question
 ---@param message string Question
----@param title string Question-header
----@param selection? string `y` or `n`
+---@param title string The header of the question
+---@param selection? 'y'|'n' Default select the character
 ---@return boolean # Answer to the question
 M.interactive = function(message, title, selection)
   if vim.g.mug_debug then
@@ -164,8 +139,9 @@ M.interactive = function(message, title, selection)
 
   selection = selection or 'n'
 
-  local choice = { y = ' [Y/n] ', n = ' [y/N] ' }
-  local res = vim.fn.inputdialog('[' .. title .. '] ' .. message .. choice[selection], '', 'n')
+  local choice = { y = 'Y/n', n = 'y/N' }
+  local msg = string.format('[%s] %s [%s] ', title, message, choice[selection])
+  local res = vim.fn.inputdialog(msg, '', 'n')
 
   if res:lower() == 'y' then
     return true
@@ -174,24 +150,25 @@ M.interactive = function(message, title, selection)
   return res == '' and selection == 'y'
 end
 
----@param message string Question
----@param choices string Question-choices
----@param default number Default answer
----@param header string Question-header
----@return number|boolean # User selection
+---Confirm question
+---@param message string|string[] Question
+---@param choices string Choices for question
+---@param default integer Default answer
+---@param header string The header of the question
+---@return integer|boolean # Selected answer
 M.confirm = function(message, choices, default, header)
-  header = '[' .. header .. '] '
+  local title = string.format('[%s]', header)
 
   if vim.g.mug_debug then
     return true
   end
 
   if type(message) == 'table' then
-    message = merge_message(message, 'confirm', _)
-    header = header .. ' \n'
+    message = merge_message(message)
+    title = string.format(' \n', title)
   end
 
-  return vim.fn.confirm(header .. message, choices, default)
+  return vim.fn.confirm(title .. message, choices, default)
 end
 
 ---Merge tables by omitting duplicate values
@@ -247,9 +224,13 @@ M.tbl_docking = function(...)
 end
 
 ---Check to see if the file exists
----@param path string Path to be checked for existence
----@return boolean # Existed or not
+---@param path string|nil Path to be checked for existence
+---@return boolean # Exist or not
 M.file_exist = function(path)
+  if not path then
+    return false
+  end
+
   local handle = io.open(path, 'r')
 
   if handle ~= nil then
@@ -259,7 +240,7 @@ M.file_exist = function(path)
   return handle ~= nil
 end
 
----Get standard output of shell commands
+---Get standard output of the shell commands
 ---@param command string Shell-command with options
 ---@return string # Shell-command stdout
 M.get_stdout = function(command)
@@ -276,6 +257,9 @@ M.get_stdout = function(command)
   return contents
 end
 
+---Extract specified name from all buffers
+---@param name string Target of extract
+---@return table # Extrasted buffers
 M.get_bufs = function(name)
   local bufs = vim.api.nvim_list_bufs()
   local tbl = {}
@@ -289,7 +273,8 @@ M.get_bufs = function(name)
   return tbl
 end
 
----@param header string Notification-header
+---Check if the current file is in the git-repository
+---@param header string The header of the notification
 ---@return boolean # In git-repository
 ---@return string # Git-repository root path
 M.has_repo = function(header)
@@ -298,6 +283,7 @@ M.has_repo = function(header)
     return false, ''
   end
 
+  ---@type string|nil
   local path = vim.fs.find('.git', { type = 'directory', upward = true })[1]
 
   if not path then
@@ -305,6 +291,7 @@ M.has_repo = function(header)
     return false, ''
   end
 
+  ---@type string
   local branch_name = vim.b.mug_branch_name
 
   if not branch_name or branch_name == _G.Mug.symbol_not_repository then
@@ -314,19 +301,30 @@ M.has_repo = function(header)
   return true, path:sub(1, -6)
 end
 
----@param header string Notification-header
+---Check if the current directory is the git-repository
+---@param header string The header of the notification
 ---@return boolean # Is it a git-repository
 M.is_repo = function(header)
-  if vim.fn.isdirectory(vim.uv.cwd() .. M.slash() .. '.git') == 0 then
-    M.notify('Current direcotry does not point to git-root', header, 3)
+  if vim.fn.isdirectory(vim.uv.cwd() .. M.get_sep() .. '.git') == 0 then
+    M.notify('Current directory does not point to git-root', header, 3)
     return false
   end
 
   return true
 end
 
----@param tbl table Specified git subcommand and options
----@return table # Table of normalized git command and options
+---@class GitCmd
+---@field cmd string
+---@field wd? string
+---@field pwd? string
+---@field noquotepath? boolean
+---@field noeditor? boolean
+---@field cfg? string
+---@field opts? table<string,string>
+
+---Create git command and option as a table
+---@param tbl GitCmd Specified git subcommand and options
+---@return table<string,string> # Table of normalized git command and options
 M.gitcmd = function(tbl)
   local wd = tbl.wd or M.pwd()
   local quotepath = tbl.noquotepath and { '-c', 'core.quotepath=false' } or {}
@@ -337,18 +335,19 @@ M.gitcmd = function(tbl)
   return M.tbl_docking('git', '-C', wd, quotepath, editor, cfg, subcmd, tbl.opts)
 end
 
----Setup virtual buffer
+---Setup the virtual buffer
 ---@param listed boolean Whether to put on the buffer list
 ---@param hidden string Behavior on buffer close
 ---@param type? string Specify buffer type
 M.nofile = function(listed, hidden, type)
   type = type or 'nofile'
-  vim.api.nvim_buf_set_option(0, 'swapfile', false)
-  vim.api.nvim_buf_set_option(0, 'buflisted', listed)
-  vim.api.nvim_buf_set_option(0, 'bufhidden', hidden)
-  vim.api.nvim_buf_set_option(0, 'buftype', type)
+  vim.api.nvim_set_option_value('swapfile', false, { scope = 'local' })
+  vim.api.nvim_set_option_value('buflisted', listed, { scope = 'local' })
+  vim.api.nvim_set_option_value('bufhidden', hidden, { scope = 'local' })
+  vim.api.nvim_set_option_value('buftype', type, { scope = 'local' })
 end
 
+---Adjust and register the name of the User-defined command
 ---@param name string User command name
 ---@param command function User command contents
 ---@param options table User command options
@@ -364,10 +363,11 @@ M.user_command = function(name, command, options)
   end
 end
 
+---Open terminal as buffer
 ---@param cmd string Launch command on terminal buffer
 M.termopen = function(cmd)
   if #cmd == 0 then
-    cmd = _G.Mug.term_shell or vim.api.nvim_get_option('shell')
+    cmd = _G.Mug.term_shell or vim.api.nvim_get_option_value('shell', { scope = 'global' })
   end
 
   local bufnr = vim.api.nvim_get_current_buf()
@@ -375,7 +375,7 @@ M.termopen = function(cmd)
   vim.fn.termopen(cmd, {
     on_exit = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
-        vim.api.nvim_command('bwipeout')
+        vim.cmd.bwipeout()
       end
     end,
   })

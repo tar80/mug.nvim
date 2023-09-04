@@ -1,16 +1,14 @@
 local util = require('mug.module.util')
+local tbl = require('mug.module.table')
 
 ---@class config
----@field set_options function User changes settings
----@field init function Initial settings
 local M = {}
 local HEADER = 'mug/config'
 
----Mug default settings
+---Set the default settings for the Mug
 ---@param overwrite? boolean
 local function set_default(overwrite)
   local method = overwrite and _G.Mug._ow or _G.Mug._def
-
   method('root_patterns', { '.git/', '.gitignore' })
   method('ignore_filetypes', { 'git', 'gitcommit', 'gitrebase' })
   method('symbol_not_repository', '---')
@@ -28,48 +26,11 @@ local function set_default(overwrite)
   end
 end
 
+---Update settings
 ---@alias userspec table Optional user settings
-
 ---@param opts userspec
 local function change_settings(opts)
-  local strings = {
-    'float_winblend',
-    'symbol_not_repository',
-    'edit_command',
-    'file_command',
-    'write_command',
-    'strftime',
-    'commit_notation',
-    'commit_gpg_sign',
-    'conflict_begin',
-    'conflict_anc',
-    'conflict_sep',
-    'conflict_end',
-    'filewin_beacon',
-    'filewin_indicates_position',
-    'loclist_position',
-    'loclist_disable_column',
-    'diff_position',
-    'index_add_key',
-    'index_force_key',
-    'index_reset_key',
-    'index_clear_key',
-    'index_inputbar',
-    'index_commit',
-    'index_auto_update',
-    'remote_url',
-    'commit_initial_msg',
-    'show_command',
-    'term_command',
-    'term_height',
-    'term_width',
-    'term_shell',
-    'term_position',
-    'term_disable_columns',
-    'term_nvim_pseudo',
-    'term_nvim_opener',
-    'patch_window_height',
-  }
+  local option_name = tbl.options
   local unknown = {}
 
   for k, _ in pairs(opts) do
@@ -77,7 +38,7 @@ local function change_settings(opts)
       _G.Mug._ow(k, util.tbl_merges({}, opts[k]))
     elseif k == 'ignore_filetypes' then
       _G.Mug._ow(k, util.tbl_merges(_G.Mug[k], opts[k]))
-    elseif vim.tbl_contains(strings, k) then
+    elseif vim.tbl_contains(option_name, k) then
       opts[k] = opts[k] ~= '' and opts[k] or nil
       _G.Mug._ow(k, opts[k])
     else
@@ -86,10 +47,12 @@ local function change_settings(opts)
   end
 
   if #unknown > 0 then
-    util.notify('Invalid variable detected. ' .. table.concat(unknown, ','), HEADER, 3)
+    local msg = string.format('Invalid variable detected. %s', table.concat(unknown, ','))
+    util.notify(msg, HEADER, 3)
   end
 end
 
+---User customized settings
 ---@param opts userspec
 function M.set_options(opts)
   if not opts then
@@ -100,10 +63,12 @@ function M.set_options(opts)
   change_settings(opts)
 end
 
+---Initial settings
 M.init = function()
   set_default(true)
 end
 
+---New instance
 local function new()
   if _G.Mug.loglevel then
     return

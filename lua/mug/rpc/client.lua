@@ -7,21 +7,25 @@ local M = {}
 local api = vim.api
 local fn = vim.fn
 
+---Set post-boot processing
+---@param callback function
 M.post_setup_buffer = function(callback)
   M.post_load = function()
     callback()
   end
 end
 
+---Open client server buffer
+---@param filepath string File to open on client server
+---@param client string savername
 M.open_buffer = function(filepath, client)
   local opener = _G.Mug.term_nvim_opener or 'tabnew'
   filepath = fn.fnameescape(filepath)
   local cmdline = string.format('%s %s', opener, filepath)
 
-  api.nvim_command(cmdline)
-  api.nvim_command('clearjumps')
-  api.nvim_buf_set_option(0, 'bufhidden', 'wipe')
-
+  vim.cmd(cmdline)
+  vim.cmd.clearjumps()
+  api.nvim_set_option_value('bufhidden', 'wipe', { scope = 'local' })
   M.post_load()
   M.post_load = nil
 
