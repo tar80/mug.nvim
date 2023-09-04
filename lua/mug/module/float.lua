@@ -3,27 +3,27 @@ local util = require('mug.module.util')
 local hl = require('mug.module.highlight')
 
 ---@class float
----@filed title function Adjust float title
----@field open function Open MugFloat window
----@filed term function Open MugTerm window
----@field input function Open MugFloat input-bar without fade highlighting
----@field input_nc function Open MugFloat input-bar with fade highlighting
----@field focus function Focus MugFloat
----@field maps function Open MugFloat and display keymaps
 local M = {}
 local HEADER = 'mug/float'
-local namespace = 'MugFloat'
+local NAMESPACE = 'MugFloat'
+---@type table|nil Value of the maparg
 local store_keymap
+---@type integer|string, integer|string
+local normal_bg, nc_bg
+local normal_float = { 'NormalNC', 'NormalFloat', 'FloatTitle', 'FloatBorder', 'ColorColumn' }
+local nc_float = { 'FloatTitle', 'FloatBorder' }
 
 ---@class Mug
 ---@field float_winblend integer MugFloat/MugTerm transparency
 _G.Mug._def('float_winblend', 0, true)
 
----Disable highlighting for floating-window when navigating to input-bar
-local ns_inputbar = vim.api.nvim_create_namespace(namespace)
-local ns_float = vim.api.nvim_create_namespace('MugFloatNC')
+---@alias NameSpace integer ID of namespace
+---Disable highlighting for the floating window border
+local ns_normal = vim.api.nvim_create_namespace(NAMESPACE)
+local ns_nc = vim.api.nvim_create_namespace('MugFloatNC')
 
----@param ns integer Namespace
+---Get the bgcolor of the specified hlgroup
+---@param ns NameSpace
 ---@param name string Hlgroup
 ---@return integer # Background color code
 local get_bgcolor = function(ns, name)
@@ -39,28 +39,41 @@ local get_bgcolor = function(ns, name)
   return bg
 end
 
+---Set the bgcolor of the specified hlgroups
+---@param ns NameSpace
+---@param bg integer|string Bgcolor
+---@param hlgroups string[] `"normal_float"`|`"nc_float"`
+local set_highlights = function(ns, bg, hlgroups)
+  for _, name in ipairs(hlgroups) do
+    hl.set_hl(name, { ns = ns, hl = { bg = bg } })
+  end
+end
+
+---Restore the bgcolor of the specified hlgroups
+---@param ns integer
+---@param state string State of the float window. `"normal"`|`"nc"`
+local restore_highlights = function(ns, state)
+  local tbl = {
+    nc = { bg = nc_bg, hlgroups = nc_float },
+    normal = { bg = normal_bg, hlgroups = normal_float },
+  }
+  local t = tbl[state]
+
+  for _, name in ipairs(t.hlgroups) do
+    hl.set_hl(name, { ns = ns, hl = { bg = t.bg } })
+  end
+end
+
 hl.late_record(function()
-  local normal_bg = get_bgcolor(0, 'Normal')
-  local nc_bg = get_bgcolor(0, 'NormalNC')
-  local items = {
-    'Title',
-    'NormalNC',
-    'NormalFloat',
-    'FloatBorder',
-    'ColorColumn',
-  }
+  normal_bg = get_bgcolor(0, 'Normal')
+  nc_bg = get_bgcolor(0, 'NormalNC')
 
-  for _, name in ipairs(items) do
-    hl.set_hl(name, { ns = ns_inputbar, hl = { bg = normal_bg } })
+  if normal_bg == 0 then
+    normal_bg = 'NONE'
   end
 
-  local nc_items = {
-    'FloatTitle',
-    'FloatBorder',
-  }
-  for _, name in ipairs(nc_items) do
-    hl.set_hl(name, { ns = ns_float, hl = { bg = nc_bg } })
-  end
+  set_highlights(ns_normal, normal_bg, normal_float)
+  set_highlights(ns_nc, nc_bg, nc_float)
 end)
 
 ---@alias float_relative string Layout the float to place at
@@ -91,22 +104,29 @@ local Float = {
   noautocmd = true,
 }
 
-local get_global = vim.api.nvim_get_option
+---Get global option value
+---@param option string Option name
+---@return any # Option value
+local get_global = function(option)
+  return vim.api.nvim_get_option_value(option, { scope = 'global' })
+end
 
+---Get title of the floating window
 ---@param title string Float title
 ---@param width number Float width
 ---@return string # Adjusted float title
 M.title = function(title, width)
-  title = ' ' .. title .. ' '
+  title = string.format(' %s ', title)
   local title_len = vim.api.nvim_strwidth(title)
 
   if title_len > width then
-    title = title:sub(1, math.max(1, title_len - 13)) .. '... '
+    title = string.format('%s... ', title:sub(1, math.max(1, title_len - 13)))
   end
 
   return title
 end
 
+---Get max range of the floating window
 ---@return number # Float max width
 ---@return number # Float max height
 local function max_range()
@@ -120,10 +140,13 @@ local function max_range()
   return w, h
 end
 
+---Close floating window and display notification
+---@param bufnr integer ID of the floating window
+---@param title string Title of the floating window
+---@param reason string Reason for closing
 local function buf_close(bufnr, title, reason)
   vim.cmd.bwipeout(bufnr)
-  -- vim.api.nvim_command('bwipeout ' .. bufnr)
-  util.notify('[' .. title .. '] ' .. reason)
+  util.notify(reason, title, 3)
 end
 
 setmetatable(Float, {
@@ -136,7 +159,7 @@ setmetatable(Float, {
     ---@param anchor float_anchor
     ---@param zindex float_zindex
     ---@param callback? float_callback
-    ---@return table|nil
+    ---@return table|nil `{bufnr: integer, opts: table}`
     _new = function(self, title, height, width, border, relative, anchor, zindex, callback)
       local opts = vim.deepcopy(self)
       local bufnr = vim.api.nvim_create_buf(false, true)
@@ -202,13 +225,14 @@ setmetatable(Float, {
       end
 
       opts.title = M.title(title or HEADER, opts.width)
-      vim.api.nvim_buf_set_name(bufnr, namespace .. '://' .. title)
+      vim.api.nvim_buf_set_name(bufnr, string.format('%s://%s', NAMESPACE, title))
 
       return { bufnr = bufnr, opts = opts }
     end,
   },
 })
 
+---Set keymap and function for the floating window
 local function float_win_cmd_and_map()
   local function float_move(key)
     local count = vim.v.count
@@ -239,13 +263,14 @@ local function float_win_cmd_and_map()
   map.quit_key()
 end
 
+---Set keymap for focus
 local function float_win_focus_map()
   local keymap = '<C-w>p'
   store_keymap = vim.fn.maparg(keymap, 'n', false, true)
 
-  vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
+  vim.api.nvim_set_option_value('winblend', _G.Mug.float_winblend, { win = 0 })
   vim.keymap.set('n', keymap, function()
-    local bufs = util.get_bufs(namespace .. '://')
+    local bufs = util.get_bufs(string.format('%s://', NAMESPACE))
     local handle = 0
 
     for _, v in ipairs(bufs) do
@@ -263,8 +288,9 @@ local function float_win_focus_map()
   end, { desc = 'Focus Mug float window' })
 end
 
----@param bufnr number Float Buffer id
----@param addition function specified buffer unique maps
+---Processing after starting the floating window
+---@param bufnr integer ID of floating window
+---@param addition function Additional process
 local function float_win_post(bufnr, addition)
   vim.api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
   float_win_cmd_and_map()
@@ -274,8 +300,9 @@ local function float_win_post(bufnr, addition)
   end
 end
 
----@param bufnr number Floating-window buffer number
----@param leavecmd function Executed when a floating-window is deleted
+---Set autocmd for the floating window
+---@param bufnr integer ID of the floating window
+---@param leavecmd function Executed when a floating window is deleted
 ---@param terminal? boolean If the buffer is a therminal
 local function float_win_autocmd(bufnr, leavecmd, terminal)
   local float_col = math.max(1, get_global('columns') - 30)
@@ -288,6 +315,8 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
     buffer = bufnr,
     callback = function()
       vim.api.nvim_win_set_option(0, 'winblend', 20)
+      restore_highlights(ns_nc, 'normal')
+
       pcall(vim.api.nvim_win_set_config, 0, {
         relative = 'editor',
         row = 1,
@@ -306,13 +335,13 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
     group = 'mug',
     buffer = bufnr,
     callback = function()
+      restore_highlights(ns_nc, 'nc')
+
       if terminal then
-        -- vim.api.nvim_command('startinsert')
         vim.cmd.startinsert()
       end
 
       vim.api.nvim_set_option_value('winblend', _G.Mug.float_winblend, { win = 0 })
-      -- vim.api.nvim_win_set_option(0, 'winblend', _G.Mug.float_winblend)
       vim.api.nvim_win_set_config(
         0,
         { relative = 'editor', row = row, col = col, height = float_height, width = float_width }
@@ -328,7 +357,7 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
       vim.api.nvim_del_autocmd(au_id_bufleave)
       vim.api.nvim_del_autocmd(au_id_bufenter)
 
-      local float_exist = util.get_bufs(namespace .. '://')
+      local float_exist = util.get_bufs(string.format('%s://', NAMESPACE))
 
       if #float_exist == 1 then
         local err = pcall(vim.fn.mapset, 'n', false, store_keymap)
@@ -336,6 +365,7 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
 
         if not err then
           vim.keymap.del('n', '<C-w>p')
+          restore_highlights(ns_nc, 'nc')
         end
       end
 
@@ -347,22 +377,23 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
   })
 end
 
----@param bufnr number Buffer id of windowflo
----@param opts table Options of window
----@return table # {bufnr = buffer id, handle = buffer handle}
+---@alias float_table table
+---@alias float_num {bufnr: integer, handle: integer}
+
+---Create the floating window
+---@param bufnr integer ID of the floating window
+---@param opts table Options of the floating window
+---@return table float_num
 local function create_float(bufnr, opts)
   local handle = vim.api.nvim_open_win(bufnr, true, opts)
-
   vim.cmd.clearjumps()
-  -- vim.api.nvim_command('clearjumps')
 
   return { bufnr = bufnr, handle = handle }
 end
 
----@alias float_table table
-
----@param tbl float_table nvim_open_win options
----@return table # { bufnr = buffer number, handle = buffer handle }
+---Open the floating window
+---@param tbl float_table
+---@return table float_num
 M.open = function(tbl)
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.contents)
 
@@ -372,28 +403,21 @@ M.open = function(tbl)
 
   local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
 
-  vim.api.nvim_win_set_hl_ns(0, ns_float)
+  vim.api.nvim_win_set_hl_ns(0, ns_nc)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave)
 
-  --[[
-  -- NOTE: Buffer information is displayed when a floating-window is started,
-  -- but it is useless and I want to hide it. In addition,
-  -- messages can be skipped if the window is set to insert mode,
-  -- but this is not adopted because it increases unnecessary processing.
-  --]]
-  -- print(' ')
-
   return buf
 end
 
----@param tbl float_table nvim_open_win options
----@return table # { bufnr = buffer number, handle = buffer handle }
+---Open the floating window as a terminal
+---@param tbl float_table
+---@return table float_num
 M.term = function(tbl)
   local cmd = tbl.cmd or ''
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.cmd)
-  namespace = 'MugTerm'
+  NAMESPACE = 'MugTerm'
 
   if not win then
     return { bufnr = nil, handle = nil }
@@ -410,26 +434,28 @@ M.term = function(tbl)
   return buf
 end
 
----@param tbl float_table nvim_open_win options
----@return table # { bufnr = buffer number, handle = buffer handle }
+---Open the input-bar
+---@param tbl float_table
+---@return table float_num
 M.input = function(tbl)
   local current_bufnr = vim.api.nvim_get_current_buf()
-  vim.api.nvim_win_set_option(0, 'winhighlight', 'NormalNC:Normal')
+  vim.api.nvim_set_option_value('winhighlight', 'NormalNC:Normal', { win = 0 })
 
   local win = Float:_new(tbl.title, 1, tbl.width, tbl.border, tbl.relative, tbl.anchor, 99, tbl.contents)
   local input_bar = win ~= nil and create_float(win.bufnr, win.opts) or {}
   win = nil
 
-  vim.api.nvim_win_set_option(0, 'winblend', 0)
-  vim.api.nvim_win_set_hl_ns(0, ns_inputbar)
+  vim.api.nvim_set_option_value('winblend', 0, { win = 0 })
+  vim.api.nvim_win_set_hl_ns(0, ns_normal)
   float_win_post(input_bar.bufnr, tbl.post)
   map.input_keys()
-  vim.api.nvim_command('startinsert!')
+  vim.cmd.startinsert({ bang = true })
   vim.api.nvim_create_autocmd({ 'WinEnter' }, {
     group = 'mug',
     once = true,
     buffer = current_bufnr,
     callback = function()
+      -- restore_highlights(ns_normal, 'normal')
       vim.wo.winhighlight = nil
     end,
     desc = 'Clear winhighlight',
@@ -438,26 +464,29 @@ M.input = function(tbl)
   return input_bar
 end
 
----@param tbl float_table nvim_open_win options
----@return table # { bufnr = buffer number, handle = buffer handle }
+---Open the input-bar as a floating window
+---@param tbl float_table
+---@return table float_num
 M.input_nc = function(tbl)
   local win = Float:_new(tbl.title, 1, tbl.width, tbl.border, tbl.relative, tbl.anchor, 99, tbl.contents)
   local input_bar = win ~= nil and create_float(win.bufnr, win.opts) or {}
 
-  vim.api.nvim_win_set_option(0, 'winblend', 0)
+  vim.api.nvim_set_option_value('winblend', 0, { win = 0 })
   map.input_keys()
   float_win_post(input_bar.bufnr, tbl.post)
-  vim.api.nvim_command('startinsert!')
+  vim.cmd.startinsert({ bang = true })
 
   return input_bar
 end
 
----@param handle number buffer handle
----@return boolean # whether the handle exists
+---Focus the floating window
+---@param handle integer Handle of the floating window
+---@return boolean # Whether the handle exists
 M.focus = function(handle)
   return vim.fn.win_gotoid(handle) ~= 0
 end
 
+---Create the hints for the keymaps
 M.maps = function()
   local map_list = function()
     local tbl = {}
