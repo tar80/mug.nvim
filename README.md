@@ -6,47 +6,26 @@ windows 版 neovim(非 wsl)をターゲットに作成しています。
 
 ## 動作条件
 
-- Neovim >= 0.9
+- Neovim >= 0.10
 - Git >= 2.39.2
 
 ## インストール
 
 - lazy.nvim
 
-```lua:lazy.nvim
+```lua
 { 'tar80/mug.nvim',
-  event = 'UIEnter',
-  config = function()
-    require('mug').setup({
-    ...,
-    variables = {
-      ...,
-      },
-    highlights = {
-      ...,
-      }
-    })
-  end,
+ event = 'UIEnter',
+ opts = {
+   ...,
+   variables = {
+     ...,
+   },
+   highlights = {
+     ...,
+   }
+ },
 }
-```
-
-- packer.nvim
-
-```lua:packer.nvim
-use({ 'tar80/mug.nvim',
-  event = 'UIEnter',
-  config = function()
-    require('mug').setup({
-    ...,
-    variables = {
-      ...,
-      },
-    highlights = {
-      ...,
-      }
-    }),
-  end,
-})
 ```
 
 ## 機能
@@ -85,7 +64,7 @@ MugFloat のフォーカスに割り当てられます。
 <details>
 <summary>MugFindroot</summary>
 
-```lua:
+```lua
 require('mug').setup({
   variables = {
     symbol_not_repository = '---',
@@ -121,7 +100,7 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
   以下のようなディレクトリ構造を持つファイル file.vim を開いたときにカレントディレクトリは
   `root_patterns`の値により、表のように設定されます。
 
-  ```text:
+  ```text
   main/
     ├ .git/
     ├ submodule/
@@ -148,7 +127,7 @@ mug の標準機能です。[mattn/vim-findroot](https://github.com/mattn/vim-fi
 <details>
 <summary>Edit</summary>
 
-```lua:
+```lua
 require('mug').setup({
   variables = {
     edit_command = 'Edit',
@@ -169,7 +148,7 @@ require('mug').setup({
 <details>
 <summary>File</summary>
 
-```lua:
+```lua
 require('mug').setup({
   variables = {
     file_command = 'File',
@@ -190,7 +169,7 @@ require('mug').setup({
 <details>
 <summary>Write</summary>
 
-```lua:
+```lua
 require('mug').setup({
   variables = {
     write_command = 'Write'
@@ -214,7 +193,7 @@ require('mug').setup({
 <details>
 <summary>MugCommit</summary>
 
-```lua:
+```lua
 require('mug').setup({
   commit = true,
   variables = {
@@ -282,7 +261,7 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
   スクリプト内`M.additional_settings`に関数を設定すれば、キーマップやコマンドを追加することもできます。
   記述方法は他のテンプレートを参考にしてください。
 
-- ~~commit_diffcached_height `integer`(上書き)~~ **Deleted**
+- ~~commit_diffキャッシュd_height `integer`(上書き)~~ **Deleted**
 
 - commit_gpg_sign `string`(上書き)  
   署名に使用する鍵(gpg)を指定します。  
@@ -297,7 +276,7 @@ NOTE: 差分バッファはトグルしても更新されません。更新が�
 <details>
 <summary>MugConfilct</summary>
 
-```lua:
+```lua
 require('mug').setup({
   conflict = true,
   variables = {
@@ -370,7 +349,7 @@ MugConflict はロケーションリストにキーを設定します。
 <details>
 <summary>MugDiff</summary>
 
-```lua:
+```lua
 require('mug').setup({
   diff = true,
   variables = {
@@ -413,7 +392,7 @@ require('mug').setup({
 <details>
 <summary>MugFiles</summary>
 
-```lua:
+```lua
 require('mug').setup({
   files = true,
 })
@@ -440,7 +419,7 @@ require('mug').setup({
 <details>
 <summary>MugIndex</summary>
 
-```lua:
+```lua
 require('mug').setup({
   index = true,
   variables = {
@@ -519,7 +498,7 @@ MugIndex ウィンドウには独自のキーマップが割り当てられま�
 <details>
 <summary>MugMerge</summary>
 
-```lua:
+```lua
 require('mug').setup({
   MugMerge = true,
 })
@@ -551,7 +530,7 @@ require('mug').setup({
 <details>
 <summary>MugMkrepo</summary>
 
-```lua:
+```lua
 require('mug').setup({
   mkrepo = true,
   variables = {
@@ -584,7 +563,7 @@ require('mug').setup({
 <details>
 <summary>MugRebase</summary>
 
-```lua:
+```lua
 require('mug').setup({
   rebase = true,
   variables = {
@@ -655,7 +634,7 @@ filetype`gitrebase`で使用できるキーと、以下のキーが有効です�
 <details>
 <summary>MugShow</summary>
 
-```lua:
+```lua
 require('mug').setup({
   show = true,
   variables = {
@@ -671,17 +650,17 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
 引数入力時の接頭辞(接尾辞)によって、補完候補と出力対象が選択されます。関数には引数も指定できます。
 補完候補は完全には対応できていません。
 
-| 接頭辞       | 出力対象       | 使用例                       |
-| :----------- | :------------- | :--------------------------- |
-| `$`          | 環境変数       | `$vim`                       |
-| `_G.`        | lua 変数       | `_G._VERSION`                |
-| `[gwbtv]:`   | vim 変数       | `v:version`                  |
-| `&`          | vim オプション | `&rtp`                       |
-| `vim.`       | 関数           | `vim.uv`, `vim.uv.cwd()` |
-| `()`(接尾辞) | vim 関数       | `expand('~')`                |
-| `nvim_`      | nvim 関数      | `nvim_list_runtime_paths()`  |
-| `:`          | コマンド       | `:version`                   |
-| `MugShow!`   | shell コマンド | `ls`, `git show`             |
+| 接頭辞       | 出力対象       | 使用例                      |
+| :----------- | :------------- | :-------------------------- |
+| `$`          | 環境変数       | `$vim`                      |
+| `_G.`        | lua 変数       | `_G._VERSION`               |
+| `[gwbtv]:`   | vim 変数       | `v:version`                 |
+| `&`          | vim オプション | `&rtp`                      |
+| `vim.`       | 関数           | `vim.uv`, `vim.uv.cwd()`    |
+| `()`(接尾辞) | vim 関数       | `expand('~')`               |
+| `nvim_`      | nvim 関数      | `nvim_list_runtime_paths()` |
+| `:`          | コマンド       | `:version`                  |
+| `MugShow!`   | shell コマンド | `ls`, `git show`            |
 
 **variables**
 
@@ -696,7 +675,7 @@ MugShow は git とは関連のないコマンドです。引数に指定した�
 <details>
 <summary>MugTerm</summary>
 
-```lua:
+```lua
 require('mug').setup({
   terminal = true,
   variables = {
@@ -760,7 +739,7 @@ neovim をネストさせない機能があります。
 
 ## 全設定初期値
 
-```lua:
+```lua
   require('mug').setup({
     commit = false,
     conflict = false,
