@@ -142,7 +142,7 @@ M.set_workspace_root = function(response)
     return 'startup'
   end
 
-  if status ~= 'differ' and status ~= 'same' then
+  if (status ~= 'differ') and (status ~= 'same') then
     if response then
       local msg = string.format('Skipped %s path', status)
       util.notify(msg, HEADER, 3, false)
@@ -173,7 +173,8 @@ M.set_workspace_root = function(response)
   ]]
   skip_event = true
   vim.cmd.lcd(parent_dir)
-  -- vim.cmd('silent lcd ' .. parent_dir)
+  vim.cmd.redrawstatus()
+  vim.cmd.redrawtabline()
   -- vim.api.nvim_set_current_dir(parent_dir)
 
   if response then

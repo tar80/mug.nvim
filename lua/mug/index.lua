@@ -100,7 +100,6 @@ local function initial_idx()
   return err, lines
 end
 
-
 ---Update indexes
 ---@return Error
 ---@return string[] # Lines of the buffer
@@ -171,11 +170,9 @@ end
 ---@param line integer Number of lines held by current buffer
 ---@param contents string[] Changes
 local function modify_buffer(line, contents)
-  vim.api.nvim_set_option_value('modifiable', true, { buf = 0})
-  -- vim.api.nvim_buf_set_option(0, 'modifiable', true)
+  vim.api.nvim_set_option_value('modifiable', true, { buf = 0 })
   vim.api.nvim_buf_set_text(0, 0, 0, line - 1, 0, contents)
-  vim.api.nvim_set_option_value('modifiable', false, {buf = 0})
-  -- vim.api.nvim_buf_set_option(0, 'modifiable', false)
+  vim.api.nvim_set_option_value('modifiable', false, { buf = 0 })
 end
 
 ---Update the buffer of the MugIndex
@@ -204,6 +201,9 @@ local function update_buffer(result)
     local height = vim.api.nvim_win_get_height(0)
     extmark.warning(result, 4, height)
   end
+
+  branch.branch_stats(vim.uv.cwd(), false)
+  vim.cmd.redrawstatus()
 end
 
 ---Auto update on buffer focus
@@ -303,7 +303,7 @@ local function input_commit_map()
   local sign, amend = {}, {}
   local title = vim.api.nvim_win_get_config(0).title[1][1]
   title = title:sub(2, #title - 1)
-  local keyid = _G.Mug.commit_gpg_sign and string.format('--gpg-sign=%s',  _G.Mug.commit_gpg_sign) or '--gpg-sign'
+  local keyid = _G.Mug.commit_gpg_sign and string.format('--gpg-sign=%s', _G.Mug.commit_gpg_sign) or '--gpg-sign'
 
   map.buf_set(true, 'i', '<C-o><C-s>', function()
     sign = #sign == 0 and { keyid } or {}
@@ -340,7 +340,7 @@ local function linewise_path()
   local relative = vim.api.nvim_get_current_line():sub(5):gsub('^(%S+).+', '%1')
   local path = string.format('%s%s', root:gsub('.git', ''), relative)
   if not util.file_exist(path) then
-    return  nil
+    return nil
   end
 
   return path
@@ -438,13 +438,8 @@ local function float_win_map()
   end, 'Launch commit-inputbar')
 
   map.buf_set(true, 'n', _G.Mug.index_commit, function()
-    local cwd = vim.uv.cwd()
     vim.api.nvim_win_close(0, {})
     vim.cmd.MugCommit()
-
-    if vim.api.nvim_buf_get_name(0):find('Mug://commit/') then
-      vim.cmd.lcd(cwd)
-    end
   end, 'Open commit-editmsg')
 
   ---staging
@@ -470,7 +465,7 @@ local function float_win_post()
 end
 
 ---Set floating window
----@stdout 
+---@stdout
 local function float_win(stdout)
   local name = vim.b.mug_branch_name
   local stats = vim.b.mug_branch_stats

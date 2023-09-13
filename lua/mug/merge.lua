@@ -79,7 +79,7 @@ local function do_merge(ff, pwd, command)
           choice = util.confirm('Merge completed. Edit commit-message?', 'Yes\nNo', 1, HEADER)
 
           if choice == 1 then
-            commit_buffer('merged')
+            commit_buffer(pwd, 'merged')
           end
 
           return nil
@@ -152,7 +152,7 @@ local function mug_merge(name)
         end
 
         if v == '--continue' then
-          commit_buffer('continue')
+          commit_buffer(pwd, 'continue')
           return
         end
 

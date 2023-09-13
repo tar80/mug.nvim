@@ -438,7 +438,7 @@ local function middle_of_rebase(pwd, opts)
         local log = vim.fn.systemlist({ 'git', 'rebase', v })
 
         if vim.v.shell_error == 0 then
-          util.notify('Successful', HEADER, 2)
+          util.notify('Success', HEADER, 2)
         else
           util.notify(log, HEADER, 3)
         end
@@ -505,6 +505,7 @@ local function mug_rebase(name)
     local stats = vim.b.mug_branch_stats
 
     if middle_of_rebase(pwd, opts) then
+      branch.branch_name(pwd, true)
       return
     end
 

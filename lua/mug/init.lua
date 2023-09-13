@@ -150,7 +150,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter' }, {
     ---Delay to accommodate user set buftype
     vim.defer_fn(function()
       set_ws_root(false)
-    end, 500)
+    end, 100)
   end,
   desc = 'Detect project-root and set current-directory',
 })

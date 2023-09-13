@@ -417,7 +417,7 @@ end
 M.term = function(tbl)
   local cmd = tbl.cmd or ''
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.cmd)
-  NAMESPACE = 'MugTerm'
+  NAMESPACE = 'term'
 
   if not win then
     return { bufnr = nil, handle = nil }

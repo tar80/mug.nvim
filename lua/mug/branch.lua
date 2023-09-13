@@ -171,8 +171,9 @@ end
 
 ---Set the repository status to local variables
 ---@param cwd string Current working directory
+---@param force? boolean Force the branch reload
 ---@return string # `cached`|`saved`|``
-M.branch_name = function(cwd)
+M.branch_name = function(cwd, force)
   local git_root = vim.fs.find('.git', { type = 'directory', upward = true })
 
   if #git_root ~= 0 then
@@ -184,7 +185,7 @@ M.branch_name = function(cwd)
   local key = branch_cache_key(git_root)
   local result = 'cached'
 
-  if (branch_cache[cwd] == nil) or (branch_cache[cwd].key ~= key) then
+  if force or (branch_cache[cwd] == nil) or (branch_cache[cwd].key ~= key) then
     if vim.fn.isdirectory(git_root .. '/.git') == 0 then
       branch_cache[cwd] = { root = nil, name = nil, info = nil, key = key, stats = nil }
       result = ''

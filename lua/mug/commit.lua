@@ -116,11 +116,11 @@ local function create_gitcmd(editmsg, optspec, msgspec, commitmsg)
 end
 
 ---Write the edited contents to the COMMIT_EDITMSG in the repository and execute the command
+---@param root string Git repository root path
 ---@param optspec? string Specified commit options
 ---@param msgspec? boolean Create commit without message
 ---@param commitmsg? table Commit-message
-local function create_commit(optspec, msgspec, commitmsg)
-  local root = util.pwd()
+local function create_commit(root, optspec, msgspec, commitmsg)
   local editmsg = string.format('%s/.git/COMMIT_EDITMSG', root)
 
   if not util.is_repo(HEADER) then
@@ -131,7 +131,7 @@ local function create_commit(optspec, msgspec, commitmsg)
   local is_commit_buffer = vim.startswith(bufname, COMMIT_BUFFER_URI)
 
   if is_commit_buffer then
-    vim.cmd(string.format('silent write! %s', editmsg))
+    vim.cmd.write({ editmsg, bang = true, mods = { silent = true } })
   end
 
   job.async(function()
@@ -144,11 +144,11 @@ local function create_commit(optspec, msgspec, commitmsg)
     if err == 2 then
       if is_commit_buffer then
         patch.close()
-        vim.cmd('silent bwipeout')
+        vim.cmd.bwipeout()
       end
-
-      branch.branch_stats(root, false)
     end
+
+    branch.branch_stats(root, false)
   end)
 end
 
@@ -158,28 +158,28 @@ local function open_buffer_post(merged, callback)
   ---Git-commit
   vim.api.nvim_buf_create_user_command(0, 'C', function()
     local option = merged == 'merged' and 'amend' or nil
-    create_commit(option)
+    create_commit(util.pwd(), option)
   end, {})
 
   ---Git-commit-amend
   vim.api.nvim_buf_create_user_command(0, 'CA', function()
-    create_commit('amend')
+    create_commit(util.pwd(), 'amend')
   end, {})
 
   ---Git-commit-sign
   vim.api.nvim_buf_create_user_command(0, 'CS', function()
     local option = merged == 'merged' and 'amend_sign' or 'sign'
-    create_commit(option)
+    create_commit(util.pwd(), option)
   end, {})
 
   ---Git-commit-amend
   vim.api.nvim_buf_create_user_command(0, 'CSA', function()
-    create_commit('amend_sign')
+    create_commit(util.pwd(), 'amend_sign')
   end, {})
 
   ---Git-commit-allow-empty
   vim.api.nvim_buf_create_user_command(0, 'CE', function()
-    create_commit('empty')
+    create_commit(util.pwd(), 'empty')
   end, {})
 
   if type(callback) == 'function' then
@@ -206,15 +206,15 @@ local function setup_commit_buffer(merged, notation)
 end
 
 ---Open unique commit-edit buffer
+---@param root string Git repository root path
 ---@param merged? string For merged commit
-M.commit_buffer = function(merged)
-  local pwd = util.pwd()
-  local filename = string.format('%s/%s', COMMIT_BUFFER_URI, vim.fs.basename(pwd))
+M.commit_buffer = function(root, merged)
+  local filename = string.format('%s/%s', COMMIT_BUFFER_URI, vim.fs.basename(root))
   local notation = _G.Mug.commit_notation
   local loaded_buffer = vim.fn.bufexists(filename) == 1
 
   patch.close()
-  branch.branch_stats(pwd, false)
+  branch.branch_stats(root, false)
 
   local branch_name = vim.api.nvim_buf_get_var(0, 'mug_branch_name')
   local branch_info = vim.api.nvim_buf_get_var(0, 'mug_branch_info')
@@ -222,6 +222,7 @@ M.commit_buffer = function(merged)
   local staged = branch_stats and branch_stats.s or 0
 
   vim.cmd(string.format('silent -tabnew %s', filename))
+  vim.cmd.lcd(root)
 
   ---Memorize the repository information of the execution-buffer
   vim.api.nvim_buf_set_var(0, 'mug_branch_name', branch_name)
@@ -241,21 +242,16 @@ M.commit_buffer = function(merged)
   if not merged then
     ---Expand unique template on buffer
     vim.cmd(string.format('silent keepalt 0r ++edit %s%s', TEMPLATE_DIR, notation))
-    -- vim.cmd('silent keepalt 0r ++edit ' .. TEMPLATE_DIR .. notation)
   else
-    local merge_msg = string.format('%s/.git/MERGE_MSG', pwd)
-    -- local merge_msg = pwd .. '/.git/MERGE_MSG'
+    local merge_msg = string.format('%s/.git/MERGE_MSG', root)
 
     if util.file_exist(merge_msg) then
       vim.cmd(string.format('silent keepalt 0r ++edit %s%s', TEMPLATE_DIR, notation))
       vim.cmd(string.format('silent 0d _|keepalt 0r ++edit %s', merge_msg))
-      -- vim.cmd('silent keepalt 0r ++edit ' .. TEMPLATE_DIR .. notation)
-      -- vim.cmd('silent 0d _|keepalt 0r ++edit ' .. merge_msg)
     else
       local commit_msg = vim.fn.systemlist(util.gitcmd({ cmd = 'log', opts = { '-1', '--oneline', '--format=%B' } }))
 
       vim.cmd(string.format('silent keepalt 0r ++edit %s%s', TEMPLATE_DIR, notation))
-      -- vim.cmd('silent keepalt 0r ++edit ' .. TEMPLATE_DIR .. notation)
       vim.api.nvim_buf_set_text(0, 0, 0, 0, 0, commit_msg)
     end
   end
@@ -277,12 +273,14 @@ local function mug_commit(name)
       return
     end
 
-    if not util.has_repo(HEADER) then
+    local ok, git_root = util.has_repo(HEADER)
+
+    if not ok then
       return
     end
 
     if opts.bang then
-      local log = vim.fn.system({ 'git', '-C', util.pwd(), 'add', '.' })
+      local log = vim.fn.system({ 'git', '-C', git_root, 'add', '.' })
 
       if vim.v.shell_error == 1 then
         util.notify(log, HEADER, 3)
@@ -291,12 +289,12 @@ local function mug_commit(name)
     end
 
     if opts.args == 'amend' then
-      create_commit('amend', true)
+      create_commit(git_root, 'amend', true)
       return
     end
 
     if opts.args == 'empty' then
-      create_commit('empty', true)
+      create_commit(git_root, 'empty', true)
       return
     end
 
@@ -322,11 +320,11 @@ local function mug_commit(name)
       table.remove(msg_tbl, 1)
       local msg = table.concat(msg_tbl, ' ')
 
-      create_commit('m', true, { msg })
+      create_commit(git_root, 'm', true, { msg })
       return
     end
 
-    M.commit_buffer()
+    M.commit_buffer(git_root)
   end, {
     nargs = '*',
     bang = true,

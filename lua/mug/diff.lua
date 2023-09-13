@@ -215,6 +215,9 @@ local function let_compare(name, ...)
 
     local diffnr = vim.api.nvim_get_current_buf()
     util.nofile(true, 'wipe')
+
+    ---remove blank line
+    table.remove(stdout)
     vim.api.nvim_buf_set_lines(diffnr, 0, -1, false, stdout)
     vim.cmd.diffthis()
     vim.api.nvim_set_current_win(handle)

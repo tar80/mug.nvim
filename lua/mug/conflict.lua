@@ -271,7 +271,7 @@ local function on_detach(bufnr, files, swb, cm_hl)
 
         if vim.api.nvim_buf_get_option(nr, 'modified') then
           vim.api.nvim_buf_call(nr, function()
-            vim.cmd('silent edit!')
+            vim.cmd.edit({ bang = true, { mods = { silent = true } } })
           end)
         end
       end
@@ -294,7 +294,7 @@ local function suggest_commit()
     local pwd = util.pwd()
 
     if choice == 1 then
-      require('mug.commit').commit_buffer('continue')
+      require('mug.commit').commit_buffer(pwd, 'continue')
     elseif choice == 2 then
       local merge_msg = string.format('%s/.git/MERGE_MSG', pwd)
       local stdout, err =
