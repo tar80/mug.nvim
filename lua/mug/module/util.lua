@@ -365,16 +365,15 @@ end
 
 ---Open terminal as buffer
 ---@param cmd string Launch command on terminal buffer
-M.termopen = function(cmd)
+---@param buf {bufnr: integer, handle: integer}
+M.termopen = function(cmd, buf)
   if #cmd == 0 then
     cmd = _G.Mug.term_shell or vim.api.nvim_get_option_value('shell', { scope = 'global' })
   end
 
-  local bufnr = vim.api.nvim_get_current_buf()
-
   vim.fn.termopen(cmd, {
     on_exit = function()
-      if vim.api.nvim_buf_is_valid(bufnr) then
+      if vim.api.nvim_buf_is_valid(buf.bufnr) then
         vim.cmd.bwipeout()
       end
     end,

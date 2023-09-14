@@ -180,7 +180,7 @@ function M.setup(options)
   mug_highlights(options)
 
   if not (vim.b.mug_branch_name or vim.g[FINDROOT_DISABLED] or vim.b[FINDROOT_DISABLED]) then
-    vim.cmd.doautocmd('mug BufEnter')
+    vim.cmd.doautocmd('<nomodeline> mug BufEnter')
   end
 
   vim.g.loaded_mug = true
@@ -189,7 +189,7 @@ end
 ---Reload plugin modules
 function M.reload()
   if not vim.g.loaded_mug then
-    util.notify('The mug is not loaded', HEADER, 4)
+    util.notify('Mug is not loaded', HEADER, 4)
     return
   end
 
@@ -200,7 +200,7 @@ function M.reload()
     end
   end
 
-  util.notify('Reloaded the mug', HEADER, 3)
+  util.notify('Reloaded Mug', HEADER, 3)
 end
 
 return M

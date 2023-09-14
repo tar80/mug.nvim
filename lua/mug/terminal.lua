@@ -98,35 +98,40 @@ end
 ---@param count integer Size of the terminal buffer
 ---@param cmd string[] Oneshot command to run in the terminal buffer
 local function term_buffer(pos, count, cmd)
-  local bufnr, handle
+  local buf
   local cmd_str = table.concat(cmd, ' ')
 
   if pos == 'float' then
-    handle = float.term({
+    buf = float.term({
       cmd = cmd_str,
       title = NAMESPACE,
       height = _G.Mug.term_height,
       width = _G.Mug.term_width,
       border = 'rounded',
-    }).handle
+    })
   else
     create_window(count, pos)
-    util.termopen(cmd_str)
+    buf = { bufnr = vim.api.nvim_get_current_buf(), handle = vim.api.nvim_get_current_win() }
+    util.termopen(cmd_str, buf)
     util.nofile(true, 'wipe', 'terminal')
     display_columns(false)
 
-    bufnr = vim.api.nvim_get_current_buf()
-    handle = vim.api.nvim_get_current_win()
-
-    on_attach(bufnr)
+    on_attach(buf.bufnr)
   end
 
-  vim.api.nvim_set_option_value('filetype', 'terminal', { buf = 0 })
+  vim.api.nvim_set_option_value('filetype', 'terminal', { buf = buf.bufnr })
+  vim.api.nvim_buf_set_name(buf.bufnr, string.format('%s://%s', NAMESPACE, cmd_str))
+  vim.api.nvim_buf_set_keymap(
+    buf.bufnr,
+    't',
+    '<M-p>',
+    '<C-\\><C-n><C-w><C-w>',
+    { noremap = true, desc = 'Go to next window' }
+  )
   vim.cmd('clearjumps|startinsert')
 
-  return handle
+  return buf.handle
 end
-
 
 ---Expand command arguments
 ---@generic T table Table of the MugTerm args

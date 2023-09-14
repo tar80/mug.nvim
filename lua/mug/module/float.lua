@@ -6,6 +6,7 @@ local hl = require('mug.module.highlight')
 local M = {}
 local HEADER = 'mug/float'
 local NAMESPACE = 'MugFloat'
+local toggle_float = '<M-p>'
 ---@type table|nil Value of the maparg
 local store_keymap
 ---@type integer|string, integer|string
@@ -49,7 +50,7 @@ local set_highlights = function(ns, bg, hlgroups)
   end
 end
 
----Restore the bgcolor of the specified hlgroups
+---Restore bgcolor of the specified hlgroups
 ---@param ns integer
 ---@param state string State of the float window. `"normal"`|`"nc"`
 local restore_highlights = function(ns, state)
@@ -74,6 +75,7 @@ hl.late_record(function()
 
   set_highlights(ns_normal, normal_bg, normal_float)
   set_highlights(ns_nc, nc_bg, nc_float)
+  set_highlights(ns_nc, normal_bg, { 'NormalFloat' })
 end)
 
 ---@alias float_relative string Layout the float to place at
@@ -265,11 +267,10 @@ end
 
 ---Set keymap for focus
 local function float_win_focus_map()
-  local keymap = '<C-w>p'
-  store_keymap = vim.fn.maparg(keymap, 'n', false, true)
+  store_keymap = vim.fn.maparg(toggle_float, 'n', false, true)
 
   vim.api.nvim_set_option_value('winblend', _G.Mug.float_winblend, { win = 0 })
-  vim.keymap.set('n', keymap, function()
+  vim.keymap.set('n', toggle_float, function()
     local bufs = util.get_bufs(string.format('%s://', NAMESPACE))
     local handle = 0
 
@@ -279,8 +280,9 @@ local function float_win_focus_map()
       end
     end
 
-    if handle == -1 then
-      local key = vim.api.nvim_replace_termcodes('<C-w>p', true, false, true)
+    if handle <= 0 then
+      local key = handle == 0 and '<C-w>p' or toggle_float
+      key = vim.api.nvim_replace_termcodes(key, true, false, true)
       vim.api.nvim_feedkeys(key, 'n', false)
     else
       vim.api.nvim_set_current_win(handle)
@@ -364,7 +366,7 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
         store_keymap = nil
 
         if not err then
-          vim.keymap.del('n', '<C-w>p')
+          vim.keymap.del('n', toggle_float)
           restore_highlights(ns_nc, 'nc')
         end
       end
@@ -378,7 +380,7 @@ local function float_win_autocmd(bufnr, leavecmd, terminal)
 end
 
 ---@alias float_table table
----@alias float_num {bufnr: integer, handle: integer}
+---@alias float_num {bufnr?: integer, handle?: integer}
 
 ---Create the floating window
 ---@param bufnr integer ID of the floating window
@@ -398,10 +400,10 @@ M.open = function(tbl)
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.contents)
 
   if not win then
-    return { bufnr = nil, handle = nil }
+    return {}
   end
 
-  local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
+  local buf = create_float(win.bufnr, win.opts)
 
   vim.api.nvim_win_set_hl_ns(0, ns_nc)
   float_win_focus_map()
@@ -417,16 +419,16 @@ end
 M.term = function(tbl)
   local cmd = tbl.cmd or ''
   local win = Float:_new(tbl.title, tbl.height, tbl.width, tbl.border, 'editor', 'NW', 50, tbl.cmd)
-  NAMESPACE = 'term'
+  NAMESPACE = 'MugTerm'
 
   if not win then
-    return { bufnr = nil, handle = nil }
+    return {}
   end
 
-  local buf = win ~= nil and create_float(win.bufnr, win.opts) or {}
-  win = nil
+  local buf = create_float(win.bufnr, win.opts)
 
-  util.termopen(cmd)
+  util.termopen(cmd, buf)
+  vim.api.nvim_win_set_hl_ns(0, ns_nc)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)
   float_win_autocmd(buf.bufnr, tbl.leave, true)
