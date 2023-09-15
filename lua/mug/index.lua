@@ -132,7 +132,7 @@ local function do_stage()
     else
       for _, select in ipairs(v.selections) do
         ---Renamed item
-        if select.contents:find(' -> ', 1, true) then
+        if select.contents:find('^[^|]* -> ') then
           select.contents = select.contents:gsub('^.+->%s', '')
         end
 
