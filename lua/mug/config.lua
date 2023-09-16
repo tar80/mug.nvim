@@ -39,7 +39,7 @@ local function change_settings(opts)
     elseif k == 'ignore_filetypes' then
       _G.Mug._ow(k, util.tbl_merges(_G.Mug[k], opts[k]))
     elseif vim.tbl_contains(option_name, k) then
-      opts[k] = opts[k] ~= '' and opts[k] or nil
+      opts[k] = (opts[k] ~= '') and opts[k] or nil
       _G.Mug._ow(k, opts[k])
     else
       table.insert(unknown, k)

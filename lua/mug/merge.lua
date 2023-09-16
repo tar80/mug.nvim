@@ -1,6 +1,7 @@
 local util = require('mug.module.util')
 local comp = require('mug.module.comp')
 local job = require('mug.module.job')
+local tbl = require('mug.module.table')
 local branch_name = require('mug.branch').branch_name
 local commit_buffer = require('mug.commit').commit_buffer
 
@@ -92,26 +93,7 @@ local function do_merge(ff, pwd, command)
 end
 
 local function complist(_, l)
-  local comp_merge = {
-    '--edit',
-    '--file=',
-    '--cleanup=',
-    '--gpq-sign=',
-    '--log',
-    '--signoff',
-    '--squash',
-    '--strategy=',
-    '--strategy-option=',
-    '--verify-signatures',
-    '--summary',
-    '--quiet',
-    '--verbose',
-    '--autostash',
-    '--allow-unrelated-histories',
-    '--rerere-autoupdate',
-    '--no-verify',
-    '--no-overwrite-ignore',
-  }
+  local comp_merge = tbl.merge_options
   local comp_force = { '--strategy-option=ours', '--strategy-option=theirs' }
 
   if vim.b.mug_branch_info ~= '' and vim.b.mug_branch_info ~= 'Detached' then

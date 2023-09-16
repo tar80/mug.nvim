@@ -18,7 +18,7 @@ local M = {}
 local HEADER = 'mug'
 local FINDROOT_DISABLED = 'mug_findroot_disable'
 
----Set the Mug install direcotry path to _G.Mug.root
+---Set a Mug install direcotry path to _G.Mug.root
 do
   local rtp = vim.api.nvim_list_runtime_paths()
 
@@ -29,7 +29,7 @@ do
   end
 end
 
----Run "git add" to current file
+---Run "git add" to the current file
 ---@param force boolean Force staging
 local function git_add(force)
   local path = util.filepath('/', true)
@@ -38,7 +38,7 @@ local function git_add(force)
     return
   end
 
-  vim.cmd.update({mods = {silent = true}})
+  vim.cmd.update({ mods = { silent = true } })
 
   if not vim.b.mug_branch_name then
     util.notify('Cannot get branch', HEADER, 3, false)
@@ -46,7 +46,7 @@ local function git_add(force)
   end
 
   if force then
-    local ok = util.interactive('Force stage to current file?', HEADER, 'y')
+    local ok = util.interactive('Force staging of the current file?', HEADER, 'y')
 
     if not ok then
       return

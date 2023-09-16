@@ -43,8 +43,8 @@ local function display_columns(display, overwrite)
   for k, v in pairs(t) do
     if overwrite then
       stored_columns[k] = vim.wo[k]
-    elseif v ~= vim.wo[k] then
-      vim.wo[k] = v
+    elseif v ~= vim.o[k] then
+      vim.o[k] = v
     end
   end
 end
@@ -113,7 +113,7 @@ local function term_buffer(pos, count, cmd)
     create_window(count, pos)
     buf = { bufnr = vim.api.nvim_get_current_buf(), handle = vim.api.nvim_get_current_win() }
     util.termopen(cmd_str, buf)
-    util.nofile(true, 'wipe', 'terminal')
+    util.nofile(buf.bufnr, true, 'wipe', 'terminal')
     display_columns(false)
 
     on_attach(buf.bufnr)

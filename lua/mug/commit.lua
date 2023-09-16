@@ -193,7 +193,7 @@ end
 local function setup_commit_buffer(merged, notation)
   vim.api.nvim_set_var('no_gitcommit_commands', true)
   vim.api.nvim_set_option_value('filetype', 'gitcommit', { scope = 'local' })
-  util.nofile(false, 'hide')
+  util.nofile(0, false, 'hide')
   vim.opt_local.signcolumn = 'no'
   vim.opt_local.spell = true
   vim.opt_local.spellfile = TEMPLATE_DIR .. 'en.utf-8.add'

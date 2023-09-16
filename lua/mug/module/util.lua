@@ -316,7 +316,6 @@ end
 ---@class GitCmd
 ---@field cmd string
 ---@field wd? string
----@field pwd? string
 ---@field noquotepath? boolean
 ---@field noeditor? boolean
 ---@field cfg? string
@@ -332,19 +331,20 @@ M.gitcmd = function(tbl)
   local cfg = tbl.cfg and { '-c', tbl.cfg } or {}
   local subcmd = tbl.cmd
 
-  return M.tbl_docking('git', '-C', wd, quotepath, editor, cfg, subcmd, tbl.opts)
+  return M.tbl_docking('git', '-C', wd, '-c', 'color.status=always', quotepath, editor, cfg, subcmd, tbl.opts)
 end
 
 ---Setup the virtual buffer
+---@param bufnr integer Buffer number
 ---@param listed boolean Whether to put on the buffer list
 ---@param hidden string Behavior on buffer close
 ---@param type? string Specify buffer type
-M.nofile = function(listed, hidden, type)
+M.nofile = function(bufnr, listed, hidden, type)
   type = type or 'nofile'
-  vim.api.nvim_set_option_value('swapfile', false, { scope = 'local' })
-  vim.api.nvim_set_option_value('buflisted', listed, { scope = 'local' })
-  vim.api.nvim_set_option_value('bufhidden', hidden, { scope = 'local' })
-  vim.api.nvim_set_option_value('buftype', type, { scope = 'local' })
+  vim.api.nvim_set_option_value('swapfile', false, { buf = bufnr })
+  vim.api.nvim_set_option_value('buflisted', listed, { buf = bufnr })
+  vim.api.nvim_set_option_value('bufhidden', hidden, { buf = bufnr })
+  vim.api.nvim_set_option_value('buftype', type, { buf = bufnr })
 end
 
 ---Adjust and register the name of the User-defined command

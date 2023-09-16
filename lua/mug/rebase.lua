@@ -9,6 +9,7 @@ local branch = require('mug.branch')
 local patch = require('mug.patch')
 local job = require('mug.module.job')
 local syntax = require('mug.module.syntax')
+local tbl = require('mug.module.table')
 
 ---@module "rebase"
 local M = {}
@@ -450,35 +451,6 @@ local function middle_of_rebase(pwd, opts)
 end
 
 local function complist(_, l)
-  local comp_rebase = {
-    '--onto',
-    '--keep-base',
-    '--apply',
-    '--empty=drop',
-    '--empty=keep',
-    '--empty=ask',
-    '--no-keep-empty',
-    '--reapply-cherry-picks',
-    '--allow-empty-message',
-    '--gpq-sign',
-    '--strategy=',
-    '--strategy-option=',
-    '--stat',
-    '--quiet',
-    '--verbose',
-    '--no-verify',
-    '--rerere-autoupdate',
-    '--force-rebase',
-    '--fork-point',
-    '--no-fork-point',
-    '--committer-date-is-author-date',
-    '--signoff',
-    '--rebase-merges=rebase-cousins',
-    '--exec',
-    '--reschedule-failed-exec',
-    '--root',
-  }
-
   if vim.b.mug_branch_info ~= '' and vim.b.mug_branch_info ~= 'Detached' then
     return comp_on_process
   end
@@ -489,7 +461,7 @@ local function complist(_, l)
     return comp.branches()
   end
 
-  return comp_rebase
+  return tbl.rebase_options
 end
 
 ---MugRebase
