@@ -40,8 +40,8 @@ hl.late_record(function()
   local hlname = vim.fn.hlexists('NormalFloat') == 1 and 'NormalFloat' or 'Normal'
   local items = {
     MugIndexAdd = hl.shade(0, hlname, 5, 20, 10),
-    MugIndexForce = hl.shade(0, hlname, 5, 10, 20),
-    MugIndexReset = hl.shade(0, hlname, 20, 5, 10),
+    MugIndexForce = hl.shade(0, hlname, 10, 5, 20),
+    MugIndexReset = hl.shade(0, hlname, 20, 10, 5),
   }
   for name, value in pairs(items) do
     hl.set_hl(name, { ns = 0, hl = { bg = value } })

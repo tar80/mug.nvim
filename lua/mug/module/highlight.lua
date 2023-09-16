@@ -51,8 +51,14 @@ end
 ---@param blue integer Incremental ratio of blue
 ---@return string # Color-code in decimal notation
 M.shade = function(ns, name, red, green, blue)
+  local bg = vim.go.background
   local hl_tbl = vim.api.nvim_get_hl(ns, { name = name })
   local decimal
+
+  if bg == 'light' then
+    red, green, blue = -blue, -red, -green
+  end
+
   if hl_tbl.bg then
     decimal = hl_tbl.bg
   elseif hl_tbl.link then
