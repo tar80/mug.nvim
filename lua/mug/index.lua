@@ -203,7 +203,6 @@ local function update_buffer(result)
   end
 
   branch.branch_stats(vim.uv.cwd(), false)
-  vim.cmd.redrawstatus()
 end
 
 ---Auto update on buffer focus
@@ -213,6 +212,7 @@ local function auto_update()
     buffer = 0,
     callback = function()
       update_buffer()
+      vim.cmd.doautocmd('User MugRefreshWindow')
     end,
     desc = 'MugIndex upload',
   })

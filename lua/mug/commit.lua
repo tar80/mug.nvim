@@ -149,6 +149,7 @@ local function create_commit(root, optspec, msgspec, commitmsg)
     end
 
     branch.branch_stats(root, false)
+    vim.cmd.doautocmd('User MugRefreshBar')
   end)
 end
 

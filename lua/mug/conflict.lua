@@ -118,7 +118,7 @@ local function adjust_filewin(toggle)
   local selected = vim.api.nvim_get_current_line():match(',$') == nil
 
   if winid == 0 or loc_row ~= loc_contents.idx then
-    vim.cmd.ll(loc_row)
+    vim.cmd('ll ' .. loc_row)
     winid = vim.api.nvim_get_current_win()
     vim.cmd.wincmd('p')
   elseif toggle and not selected and new_row >= win_row then

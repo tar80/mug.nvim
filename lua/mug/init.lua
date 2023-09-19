@@ -135,6 +135,16 @@ end
 vim.api.nvim_create_augroup('mug', {})
 local set_ws_root = require('mug.workspace').set_workspace_root
 
+vim.api.nvim_create_autocmd('User', {
+  group = 'mug',
+  pattern = 'MugRefreshBar',
+  once = true,
+  callback = function()
+    vim.cmd.redrawstatus()
+    vim.cmd.redrawtabline()
+  end,
+})
+
 ---Set the project root path as the current directory
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = 'mug',

@@ -173,9 +173,7 @@ M.set_workspace_root = function(response)
   ]]
   skip_event = true
   vim.cmd.lcd(parent_dir)
-  vim.cmd.redrawstatus()
-  vim.cmd.redrawtabline()
-  -- vim.api.nvim_set_current_dir(parent_dir)
+  vim.cmd.doautocmd('User MugRefreshBar')
 
   if response then
     local msg = string.format('Changed root %s', parent_dir)
@@ -200,7 +198,7 @@ vim.api.nvim_create_autocmd({ 'DirChangedPre' }, {
 
     local path = util.conv_slash(vim.api.nvim_get_vvar('event').directory)
     detect_project_root(path)
-    vim.cmd.redrawstatus()
+    vim.cmd.doautocmd('User MugRefreshBar')
   end,
   desc = 'Detect project-root and set git-status',
 })
