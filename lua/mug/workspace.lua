@@ -160,6 +160,11 @@ M.set_workspace_root = function(response)
         util.notify('Skipped pointing to same path', HEADER, 3, false)
       end
 
+      vim.api.nvim_exec_autocmds('User', {
+        group = 'mug',
+        pattern = 'MugRefreshBar',
+      })
+
       return 'same'
     end
 
@@ -173,7 +178,10 @@ M.set_workspace_root = function(response)
   ]]
   skip_event = true
   vim.cmd.lcd(parent_dir)
-  vim.cmd.doautocmd('User MugRefreshBar')
+  vim.api.nvim_exec_autocmds('User', {
+    group = 'mug',
+    pattern = 'MugRefreshBar',
+  })
 
   if response then
     local msg = string.format('Changed root %s', parent_dir)
@@ -198,7 +206,10 @@ vim.api.nvim_create_autocmd({ 'DirChangedPre' }, {
 
     local path = util.conv_slash(vim.api.nvim_get_vvar('event').directory)
     detect_project_root(path)
-    vim.cmd.doautocmd('User MugRefreshBar')
+    vim.api.nvim_exec_autocmds('User', {
+      group = 'mug',
+      pattern = 'MugRefreshBar',
+    })
   end,
   desc = 'Detect project-root and set git-status',
 })

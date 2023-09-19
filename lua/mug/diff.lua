@@ -163,7 +163,8 @@ local function let_compare(name, ...)
   end
 
   job.async(function()
-    local stdout, err
+    ---@type string|string[], integer
+    local stdout, loglevel
     local branchspec = options.treeish:gsub('^origin/', '')
 
     if name == 'FetchRemote' then
@@ -172,17 +173,17 @@ local function let_compare(name, ...)
       end
 
       options.treeish = string.format('origin/%s', branchspec)
-      stdout, err = job.await(util.gitcmd({ cmd = 'branch', opts = { '-r', '--list', options.treeish } }))
+      loglevel, stdout = job.await(util.gitcmd({ cmd = 'branch', opts = { '-r', '--list', options.treeish } }))
 
-      if #stdout == 0 then
+      if stdout == '' then
         local msg = string.format('Remote %s is not exist', options.treeish)
         util.notify(msg, HEADER, 3)
         return
       end
 
-      stdout, _ = job.await(util.gitcmd({ cmd = 'fetch', opts = { 'origin', branchspec } }))
+      loglevel, stdout = job.await(util.gitcmd({ cmd = 'fetch', opts = { 'origin', branchspec } }))
 
-      if stdout[1]:find('fatal:', 1, true) then
+      if stdout:find('fatal:', 1, true) then
         local msg = string.format('Cannot fetch %s', options.treeish)
         util.notify(msg, HEADER, 2)
         return
@@ -192,7 +193,7 @@ local function let_compare(name, ...)
     local pathspec, same_file = adjust_path(options.path)
 
     if same_file then
-      stdout, _ = job.await(util.gitcmd({ cmd = 'diff', opts = { '--no-color', branchspec, '--', pathspec } }))
+      loglevel, stdout = job.await(util.gitcmd({ cmd = 'diff', opts = { '--no-color', branchspec, '--', pathspec } }))
 
       if #stdout == 0 then
         util.notify('No difference', HEADER, 2)
@@ -202,9 +203,9 @@ local function let_compare(name, ...)
 
     local refs = string.format('%s:%s', options.treeish, pathspec)
     local filename = string.format('%s%s', DIFF_URI, refs)
-    stdout, err = job.await(util.gitcmd({ noquotepath = true, cmd = 'cat-file', opts = { '-p', refs } }))
+    loglevel, stdout = job.await_job(util.gitcmd({ noquotepath = true, cmd = 'cat-file', opts = { '-p', refs } }))
 
-    if err > 2 then
+    if loglevel > 2 then
       util.notify(stdout[1], HEADER, 3)
       return
     end

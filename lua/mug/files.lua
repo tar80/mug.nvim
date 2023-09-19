@@ -16,18 +16,15 @@ local function do_move(wd, oldname, newname, force)
   local mv_cmd = util.gitcmd({ wd = wd, cmd = cmd, opts = { mid[force], post } })
 
   job.async(function()
-    local result, err = job.await(mv_cmd)
+    local loglevel, result = job.await(mv_cmd)
 
-    if err > 2 then
-      util.notify(result, HEADER, err, false)
+    if loglevel ~= 2 then
+      util.notify(result, HEADER, 3, false)
     else
       branch_stats()
       local old_bufnr = vim.api.nvim_get_current_buf()
       vim.cmd.edit({ string.format('%s/%s', wd, newname), bang = true })
-      vim.cmd.bwipeout({old_bufnr, bang = true})
-      -- vim.cmd.bwipeout({old_bufnr, bang = true, {mods = {silent = true}}})
-      -- vim.cmd('edit! ' .. wd .. '/' .. newname)
-      -- vim.cmd('silent bwipeout! ' .. old_bufnr)
+      vim.cmd.bwipeout({ old_bufnr, bang = true })
     end
   end)
 end
@@ -43,15 +40,15 @@ local function do_remove(wd, name, force)
   local rm_cmd = util.gitcmd({ wd = wd, cmd = cmd, opts = { mid[force], post } })
 
   job.async(function()
-    local result, err = job.await(rm_cmd)
+    local loglevel, result= job.await(rm_cmd)
 
-    if err > 2 then
-      util.notify(result, HEADER, err, false)
+    if  loglevel ~= 2 then
+      util.notify(result, HEADER, 3, false)
     else
       branch_stats()
 
       local msg = force and 'Delete ' or 'Remove index '
-      util.notify(msg .. name, HEADER, err, false)
+      util.notify(msg .. name, HEADER, 3, false)
     end
   end)
 end

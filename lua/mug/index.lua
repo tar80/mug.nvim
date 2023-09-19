@@ -10,9 +10,13 @@ local HEADER, NAMESPACE = 'mug/index', 'MugIndex'
 local INPUT_TITLE = 'Commit'
 local INPUT_WIDTH = 54
 local stat_lines, add_lines, reset_lines, force_lines = {}, {}, {}, {}
-local float_handle, input_handle = 0, 0
 local item_count = 0
 local enable_ignored = false
+local index_buffer = {
+  handle = 0,
+  input_handle = 0,
+  alt_bufnr = 0,
+}
 
 ---@type integer
 local ns_add = vim.api.nvim_create_namespace(NAMESPACE .. '_Add')
@@ -152,7 +156,6 @@ local function do_stage()
 
       if vim.api.nvim_get_vvar('shell_error') ~= 0 then
         table.insert(error_msg, string.format('[%s] %s', v.subcmd, output[1]))
-        -- table.insert(error_msg, '[' .. v.subcmd .. '] ' .. output[1])
       end
     end
 
@@ -203,6 +206,13 @@ local function update_buffer(result)
   end
 
   branch.branch_stats(vim.uv.cwd(), false)
+
+  local name = vim.b.mug_branch_name
+  local stats = vim.b.mug_branch_stats
+  vim.api.nvim_buf_call(index_buffer.alt_bufnr, function()
+    vim.b.mug_branch_name = name
+    vim.b.mug_branch_stats = stats
+  end)
 end
 
 ---Auto update on buffer focus
@@ -212,7 +222,10 @@ local function auto_update()
     buffer = 0,
     callback = function()
       update_buffer()
-      vim.cmd.doautocmd('User MugRefreshWindow')
+      vim.api.nvim_exec_autocmds('User', {
+        group = 'mug',
+        pattern = 'MugRefreshBar',
+      })
     end,
     desc = 'MugIndex upload',
   })
@@ -325,11 +338,8 @@ local function input_commit_map()
     end
 
     local cmdline = util.gitcmd({ cmd = 'commit', opts = { sign, amend, '--cleanup=default', msg } })
-
+    vim.fn.systemlist(cmdline)
     vim.cmd('stopinsert!|quit')
-    local stdout = vim.fn.systemlist(cmdline)
-
-    update_buffer(stdout)
   end, 'Update index')
 end
 
@@ -418,7 +428,7 @@ local function float_win_map()
   end, 'Add selection and cursor up')
 
   map.buf_set(true, 'n', _G.Mug.index_inputbar, function()
-    if float.focus(input_handle) then
+    if float.focus(index_buffer.input_handle) then
       return
     end
 
@@ -427,7 +437,7 @@ local function float_win_map()
       return
     end
 
-    input_handle = float.input_nc({
+    index_buffer.input_handle = float.input_nc({
       title = INPUT_TITLE,
       width = INPUT_WIDTH,
       border = 'single',
@@ -465,12 +475,12 @@ local function float_win_post()
 end
 
 ---Set floating window
----@stdout
+---@param stdout string[] MugIndex contents per line
 local function float_win(stdout)
   local name = vim.b.mug_branch_name
   local stats = vim.b.mug_branch_stats
 
-  float_handle = float.open({
+  index_buffer.handle = float.open({
     title = NAMESPACE,
     height = 1,
     width = 0.4,
@@ -490,10 +500,11 @@ local function float_win(stdout)
 end
 
 vim.api.nvim_create_user_command(NAMESPACE, function(opts)
-  if float.focus(float_handle) then
+  if float.focus(index_buffer.handle) then
     return
   end
 
+  index_buffer.alt_bufnr = vim.api.nvim_win_get_buf(0)
   local has_repo, git_root = util.has_repo(HEADER)
 
   if not has_repo then

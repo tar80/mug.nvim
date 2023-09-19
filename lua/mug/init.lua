@@ -55,15 +55,14 @@ local function git_add(force)
 
   job.async(function()
     local option = force and '-fv' or '-v'
-    local cmd = util.gitcmd({ cmd = 'add', opts = { option, path } })
-    local result, err = job.await(cmd)
+    local loglevel, result = job.await(util.gitcmd({ cmd = 'add', opts = { option, path } }))
 
-    if vim.tbl_isempty(result) then
-      result = { 'No changes' }
+    if result[1] == '' then
+      result[1] = 'There is no change'
     end
 
     require('mug.branch').branch_stats(util.pwd(), false)
-    util.notify(result, HEADER, err, false)
+    util.notify(result, HEADER, loglevel, false)
   end)
 end
 
@@ -76,6 +75,10 @@ local function mug_variables(options)
 
   if options.terminal then
     _G.Mug._def('term_command', 'MugTerm', true)
+  end
+
+  if options.subcommand then
+    _G.Mug._def('sub_command', 'Mug', true)
   end
 
   require('mug.config').set_options(options.variables)
@@ -149,7 +152,7 @@ vim.api.nvim_create_autocmd('User', {
 vim.api.nvim_create_autocmd({ 'BufEnter' }, {
   group = 'mug',
   callback = function()
-    if vim.b[FINDROOT_DISABLED] or vim.g[FINDROOT_DISABLED] then
+    if vim.b[FINDROOT_DISABLED] or vim.g[FINDROOT_DISABLED] or vim.bo.buftype ~= '' then
       return
     end
 
@@ -166,7 +169,7 @@ vim.api.nvim_create_autocmd({ 'BufEnter' }, {
 })
 
 ---":MugFindroot"
----Detect project-root of current buffer
+---Detect project-root of the current buffer
 vim.api.nvim_create_user_command('MugFindroot', function(opts)
   if opts.args == 'stopbuffer' then
     vim.api.nvim_buf_set_var(0, FINDROOT_DISABLED, true)
@@ -182,7 +185,7 @@ end, {
   end,
 })
 
----Setup the mug general settings
+---Setup mug general settings
 ---@param options table Overwrite options
 function M.setup(options)
   mug_variables(options)
@@ -190,7 +193,10 @@ function M.setup(options)
   mug_highlights(options)
 
   if not (vim.b.mug_branch_name or vim.g[FINDROOT_DISABLED] or vim.b[FINDROOT_DISABLED]) then
-    vim.cmd.doautocmd('<nomodeline> mug BufEnter')
+    vim.api.nvim_exec_autocmds('BufEnter', {
+      group = 'mug',
+      modeline = false,
+    })
   end
 
   vim.g.loaded_mug = true

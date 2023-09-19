@@ -1,7 +1,8 @@
 ---@class util
 local M = {}
 local has_shellslash = vim.fn.exists('+shellslash') == 1
-local is_win = vim.fn.has('win32')
+
+M.is_win = vim.fn.has('win32') == 1
 
 ---Convert backslash to slash
 ---@param item string String to convert
@@ -85,11 +86,9 @@ local function merge_message(message)
       connect = v
     elseif connect then
       merged = string.format('%s%s%s\n', merged, connect, v)
-      -- merged = merged .. connect .. v .. tail_blank .. '\n'
       connect = nil
     else
       merged = string.format('%s%s\n', merged, v)
-      -- merged = merged .. v .. tail_blank .. '\n'
     end
   end
 
@@ -120,7 +119,7 @@ M.notify = function(message, title, loglevel, multiline)
     header = string.format('[%s]%s', title, concatenate)
   end
 
-  if is_win then
+  if M.is_win then
     message = message:gsub('%[[%d;]*[%w]', '')
   end
 
@@ -331,7 +330,7 @@ M.gitcmd = function(tbl)
   local cfg = tbl.cfg and { '-c', tbl.cfg } or {}
   local subcmd = tbl.cmd
 
-  return M.tbl_docking('git', '-C', wd, '-c', 'color.status=always', quotepath, editor, cfg, subcmd, tbl.opts)
+  return M.tbl_docking('git', '-C', wd, quotepath, editor, cfg, subcmd, tbl.opts)
 end
 
 ---Setup the virtual buffer
@@ -364,20 +363,31 @@ M.user_command = function(name, command, options)
 end
 
 ---Open terminal as buffer
----@param cmd string Launch command on terminal buffer
----@param buf {bufnr: integer, handle: integer}
-M.termopen = function(cmd, buf)
+---@param cmd string|table Launch command on terminal buffer
+---@param bufnr integer
+M.termopen = function(cmd, bufnr)
   if #cmd == 0 then
     cmd = _G.Mug.term_shell or vim.api.nvim_get_option_value('shell', { scope = 'global' })
   end
 
   vim.fn.termopen(cmd, {
     on_exit = function()
-      if vim.api.nvim_buf_is_valid(buf.bufnr) then
-        vim.cmd.bwipeout()
+      if vim.api.nvim_buf_is_valid(bufnr) then
+        vim.cmd.bwipeout({ bang = true })
       end
     end,
   })
+end
+
+---Byte-compile the specified file
+---@param input string Relative path from mug/lua/mug/
+---@param output string Output file name
+M.byte_compile = function(input, output)
+  local parent_dir = M.normalize(string.format('%s/lua/mug/', _G.Mug.root), '/')
+  local chunk = assert(loadfile(parent_dir .. input))
+  local out = assert(io.open(parent_dir .. output, "wb"))
+  out:write(string.dump(chunk))
+  out:close()
 end
 
 return M

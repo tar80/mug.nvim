@@ -15,17 +15,17 @@ end
 
 M.index = function()
   vim.cmd([[
-    syn match MugIndexHeader "^\s##\s.\+$" display
-    syn match MugIndexUnstage "^\s.[MADRC]\s" display
-    syn match MugIndexStage "^\s[MADRC]" display
-    syn match MugIndexUnstage "^\s[?!U]\{2}" display
+    syn match MugIndexHeader "^\s\?##\s.\+$" display
+    syn match MugIndexUnstage "^\s\?.[MADRC]\s" display
+    syn match MugIndexStage "^\s\?[MADRC]" display
+    syn match MugIndexUnstage "^\s\?[?!U]\{2}" display
   ]])
 end
 
 M.log = function()
   vim.cmd([[
     syntax match MugLogHash "^\s\?\w\{7,8}\s" display
-    syntax match MugLogHash "^\scommit\s\w\+$" display
+    syntax match MugLogHash "^\s\?commit\s\w\+$" display
     syntax match MugLogDate "\d\{4}-\d\d-\d\d" display
     syntax match MugLogDate "\sAuthor:\s.\+$" display
     syntax match MugLogOwner "<\w\+>" display
@@ -36,11 +36,11 @@ end
 
 M.diff = function()
   vim.cmd([[
-    syntax match Error "^\sdiff\s--git\s.\+$"
-    syntax match Error "^\sindex\s\w\+\.\..\+$"
-    syntax match Directory "^\s@@\s[0-9\-+, ]\+\s@@"
-    syntax region DiffChanged start="^\s+[^+]"hs=s+1 end="$"
-    syntax region DiffRemoved start="^\s-[^-]"hs=s+1 end="$"
+    syntax match Error "^\s\?diff\s--git\s.\+$"
+    syntax match Error "^\s\?index\s\w\+\.\..\+$"
+    syntax match Directory "^\s\?@@\s[0-9\-+, ]\+\s@@"
+    syntax region DiffChanged start="^\s\?+[^+]"hs=s+1 end="$"
+    syntax region DiffRemoved start="^\s\?-[^-]"hs=s+1 end="$"
   ]])
 end
 

@@ -75,7 +75,7 @@ end
 ---@param args Preview_arguments
 ---@param numwidth integer
 ---@param hash string
----@return table stdout, integer loglevel
+---@return integer loglevel, table stdout
 local function get_patch(commitish, args, numwidth, hash)
   local opts = {
     '--cached',
@@ -95,7 +95,7 @@ local function get_patch(commitish, args, numwidth, hash)
     cmd = 'diff'
   end
 
-  return job.await(util.gitcmd({ noquotepath = true, cmd = cmd, opts = opts }))
+  return job.await_job(util.gitcmd({ noquotepath = true, cmd = cmd, opts = opts }))
 end
 
 ---Get startup arguments of the preview window
@@ -241,15 +241,15 @@ M.open = function(position, hash)
   end
 
   job.async(function()
-    local stdout, err = get_patch(commitish, bufinfo, numwidth, hash)
+    local loglevel, stdout = get_patch(commitish, bufinfo, numwidth, hash)
 
-    if err > 3 then
-      util.notify(stdout, HEADER, err)
+    if loglevel > 2 then
+      util.notify(stdout, HEADER, loglevel)
       return
     end
 
     if commitish == 'cached' and #stdout == 0 then
-      util.notify('No difference', HEADER, err)
+      util.notify('No difference', HEADER, loglevel)
       return
     end
 
@@ -261,7 +261,7 @@ end
 M.close = function()
   for _, v in pairs(preview_window) do
     if pcall(vim.api.nvim_win_get_option, v[2], 'previewwindow') then
-      vim.cmd.bwipeout(v[1])
+      vim.cmd.bwipeout({v[1], bang = true})
     end
   end
 end

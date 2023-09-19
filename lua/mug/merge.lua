@@ -8,43 +8,22 @@ local commit_buffer = require('mug.commit').commit_buffer
 local HEADER, NAMESPACE = 'mug/merge', 'MugMerge'
 local comp_on_process = { '--abort', '--continue', '--quit' }
 
----Do git fetch
----@param command string[] command line
-local function do_fetch(command)
-  local stdout, err = {}, 2
-
-  local function notify()
-    if #stdout == 0 and err == 2 then
-      stdout = { 'Success' }
-    end
-
-    table.remove(stdout, 1)
-    util.notify(stdout, HEADER, err, false)
-  end
-
-  job.async(function()
-    stdout, err = job.await(command)
-
-    branch_name(util.pwd())
-  end, notify)
-end
-
 ---Do git merge
 ---@param ff string Fast-forward or not. `""` or `"FF"`
 ---@param pwd string Current directory path
 ---@param command table Git merge options
 local function do_merge(ff, pwd, command)
-  local stdout, err = {}, 2
+  local stdout, loglevel = {}, 2
 
   local function notify()
     local multi = true
 
-    if #stdout == 0 and err == 2 then
+    if #stdout == 0 and loglevel == 2 then
       if vim.tbl_contains(command, '--abort') then
         local filepath = util.filepath()
 
         if filepath and util.interactive('Aborted. Reload current buffer?', HEADER, 'n') then
-          vim.cmd.edit({filepath, bang = true})
+          vim.cmd.edit({ filepath, bang = true })
         end
 
         return
@@ -54,14 +33,14 @@ local function do_merge(ff, pwd, command)
       multi = false
     end
 
-    util.notify(stdout, HEADER, err, multi)
+    util.notify(stdout, HEADER, loglevel, multi)
   end
 
   job.async(function()
     local choice
-    stdout, err = job.await(command)
+    loglevel, stdout = job.await_job(command)
 
-    if err == 2 then
+    if loglevel == 2 then
       branch_name(pwd)
 
       if ff == '' and #stdout > 0 then
@@ -71,8 +50,11 @@ local function do_merge(ff, pwd, command)
           if choice == 1 then
             require('mug.conflict').loclist()
           elseif choice == 2 then
-            stdout, err = job.await(util.gitcmd({ cmd = 'merge', opts = { '--abort' } }))
-            branch_name(pwd)
+            loglevel, stdout = job.await_job(util.gitcmd({ cmd = 'merge', opts = { '--abort' } }))
+
+            if loglevel == 2 then
+              branch_name(pwd)
+            end
           end
 
           return nil
@@ -87,9 +69,7 @@ local function do_merge(ff, pwd, command)
         end
       end
     end
-
-    notify()
-  end)
+  end, notify)
 end
 
 local function complist(_, l)
@@ -170,7 +150,18 @@ vim.api.nvim_create_user_command(NAMESPACE .. 'To', function(opts)
   local force = opts.bang and '--force' or ''
   local branchspec = string.format('%s:%s', vim.b.mug_branch_name, opts.args)
 
-  do_fetch(util.gitcmd({ cmd = 'fetch', noquotepath = false, opts = { force, '.', branchspec } }))
+  job.async(function()
+    local loglevel, stdout =
+      job.await_job(util.gitcmd({ cmd = 'fetch', noquotepath = false, opts = { force, '.', branchspec } }))
+    branch_name(util.pwd())
+
+    if #stdout == 0 and loglevel == 2 then
+      stdout = { 'Success' }
+    end
+
+    table.remove(stdout, 1)
+    util.notify(stdout, HEADER, loglevel, false)
+  end)
 end, {
   nargs = 1,
   bang = true,

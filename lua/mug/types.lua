@@ -1,0 +1,14 @@
+---@class JobTerm
+---@field name string Buffer name
+---@field filetype string Buffer filetype
+---@field listed boolean Buflisted option
+---@field pos string Buffer position
+---@field row integer Buffer height
+---@field bufnr? integer Buffer number
+---@field chan? integer Term channel
+---@field code? integer Shell command exitcode
+---@field signal? integer Shell command signal
+---@field stdout? table Shell command stdout
+---@field stderr? table Shell command stderr
+---@field _new? fun(self: JobTerm): nil
+---@field _std? fun(self: JobTerm, output: string, data: string): nil

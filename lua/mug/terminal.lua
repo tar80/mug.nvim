@@ -112,7 +112,7 @@ local function term_buffer(pos, count, cmd)
   else
     create_window(count, pos)
     buf = { bufnr = vim.api.nvim_get_current_buf(), handle = vim.api.nvim_get_current_win() }
-    util.termopen(cmd_str, buf)
+    util.termopen(cmd_str, buf.bufnr)
     util.nofile(buf.bufnr, true, 'wipe', 'terminal')
     display_columns(false)
 
@@ -151,18 +151,6 @@ local function get_args(fargs)
   return pos, fargs
 end
 
----Get the servername of the current instance
----@return string # servername
-local function get_server()
-  local s = vim.api.nvim_get_vvar('servername')
-
-  if not s then
-    s = vim.fn.serverstart()
-  end
-
-  return s
-end
-
 ---Open MugTerm
 ---@param count integer Size of the terminal buffer
 ---@param bang boolean Has bang
@@ -173,7 +161,7 @@ M.open = function(count, bang, fargs)
   end
 
   local pos, cmd = get_args(fargs)
-  local server = get_server()
+  local server = shell.get_server()
 
   if bang or _G.Mug.term_nvim_pseudo then
     shell.set_env('NVIM_MUG_SERVER', server)

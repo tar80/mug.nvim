@@ -21,6 +21,18 @@ local function opt_shellesc(option, value)
   return option .. ' ' .. vim.fn.shellescape(value)
 end
 
+---Setart client server
+---@return string # Server address
+M.get_server = function()
+  local address = vim.api.nvim_get_vvar('servername')
+
+  if not address then
+    address = vim.fn.serverstart()
+  end
+
+  return address
+end
+
 ---@param name string Name of environment
 ---@param value any Value of environment
 M.set_env = function(name, value)

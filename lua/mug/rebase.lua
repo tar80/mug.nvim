@@ -98,7 +98,8 @@ local function sendkey_preview(key, winid)
   end
 
   vim.api.nvim_win_call(winid, function()
-    vim.api.nvim_command(string.format('exe "normal %s"', key))
+    vim.cmd.normal(key)
+    -- vim.api.nvim_command(string.format('exe "normal %s"', key))
   end)
 end
 
@@ -174,21 +175,9 @@ local function map_to_server()
   end)
 end
 
----Setart client server
----@return string # Server address
-local function start_server()
-  local address = vim.api.nvim_get_vvar('servername')
-
-  if not address then
-    address = vim.fn.serverstart()
-  end
-
-  return address
-end
-
 ---Open rebase buffer
 local function rebase_buffer(selected, options, hash_rb)
-  local server = start_server()
+  local server = shell.get_server()
 
   shell.set_env('NVIM_MUG_SERVER', server)
   shell.nvim_client('GIT_SEQUENCE_EDITOR')
@@ -196,10 +185,10 @@ local function rebase_buffer(selected, options, hash_rb)
   job.async(function()
     local squash = selected and '--autosquash' or ''
     local cmdline = util.gitcmd({ noquotepath = true, cmd = 'rebase', opts = { squash, options, hash_rb } })
-    local stdout, err = job.await(cmdline)
+    local ok, stdout= job.await(cmdline)
 
-    if err > 2 then
-      util.notify(stdout, HEADER, err, true)
+    if not ok then
+      util.notify(stdout, HEADER, 3, true)
       return
     end
   end)

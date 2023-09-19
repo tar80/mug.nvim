@@ -192,6 +192,105 @@ require('mug').setup({
 **無効化されているコマンド**
 
 <details>
+<summary>Mug</summary>
+
+```lua
+require('mug').setup({
+  subcommand = true,
+  variables = {
+    sub_command = 'Mug',
+    result_position = 'botright',
+    result_log_format = {
+      '--graph --date=short --format=%C(cyan)%h\\ %C(magenta)[%ad]\\ %C(reset)%s%C(auto)%d',
+      '--graph -10 --name-status --oneline --date=short --format=%C(yellow\\ reverse)%h%C(reset)\\ %C(magenta)[%ad]%C(cyan)%an\\ %C(green)%s%C(auto)%d',
+    },
+    result_map = {},
+  }
+})
+```
+
+**:Mug \<sub-command> [\<option>]**
+
+`git`のラッパーです。コマンドのリザルトを専用のバッファに表示します。  
+既知の問題として色の表示がずれます。原因がわかれば直します。
+
+**リザルト出力バッファ**
+
+gitコマンドの結果を出力するバッファです。実体は`nvim_open_term`で開いた疑似ターミナル
+であるため、通常のバッファとは挙動が異なります。
+
+| モード | キー  | 説明                                               |
+| :----: | :---: | :------------------------------------------------- |
+|   n    |   q   | バッファを閉じる                                   |
+|   n    |   p   | (カーソル下)コミット詳細をフロートウィンドウに表示 |
+|   n    |   o   | (カーソル下)ファイル名を代替バッファとして開く     |
+|   n    | \<CR> | (カーソル下)ファイル名を開く(gf相当)               |
+
+**variables**
+
+- sub_command `string`(上書き)  
+  コマンド`Mug`を別名で登録します。
+
+- result_position `string`(上書き)  
+  出力バッファの起動位置です。  
+  `vertical`に加え、`topleft`、`botright`、aboveleft`、`belowright`を指定できます。
+
+- result_log_format `table`(上書き)
+  `Mug log`の補完リストに独自の文字列を追加します。
+
+- result_map `table`(上書き)  
+  出力バッファにキーマップを設定します。  
+  書式は、`result_map = { lhs = {mode, rhs , {opts}}`とします。
+  `opts`は`nvim_buf_set_keymap`に準じます。いくつか設定例を挙げておきます。
+
+  ```lua
+  result_map = {
+    --カーソル下コミットハッシュを対象に`git reset`
+    r = {
+        'n',
+        'callback',
+        {
+        callback = function()
+            local word = vim.fn.expand('<cword>')
+            if not word:find('[^%w]') then
+            local resp = vim.system({ 'git', 'reset', word }):wait()
+            if resp.code == 0 then
+                vim.notify(resp.stdout, vim.log.levels.INFO)
+            else
+                vim.notify(resp.stderr, vim.log.levels.WARN)
+            end
+            end
+        end,
+        },
+    },
+
+    --代替バッファを対象にカーソル下コミットハッシュを`MugDiff`
+    d = {
+        'n',
+        'callback',
+        {
+        callback = function()
+            local word = vim.fn.expand('<cword>')
+            if not word:find('[^%w]') then
+                local winid = vim.fn.bufwinid('#')
+
+                if winid ~= -1 then
+                    vim.api.nvim_win_call(winid, function()
+                    vim.cmd.MugDiff(word)
+                    end)
+                    vim.cmd.bwipeout({bang = true})
+                end
+            end
+        end,
+        },
+    },
+  }
+  ```
+
+[subcommand.mp4](https://github.com/tar80/test/assets/45842304/1aadb89a-6e10-4b83-af83-22eb8ca3216d)
+
+</details>
+<details>
 <summary>MugCommit</summary>
 
 ```lua

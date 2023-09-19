@@ -57,16 +57,15 @@ local function async_warning(staged)
   end
 
   job.async(function()
-    local result, err = job.await(util.gitcmd({ cmd = 'commit', opts = { '--dry-run' } }))
-    local no_stages = not vim.tbl_contains(result, 'Changes to be committed:')
-    ---@type boolean
-    local conflicts = vim.tbl_contains(result, 'You have unmerged paths.')
+    local loglevel, result = job.await(util.gitcmd({ cmd = 'commit', opts = { '--dry-run' } }))
+    local stages = result[1]:find('Changes to be committed:', 1, true)
+    local conflicts = result[1]:find('You have unmerged paths.', 1, true)
     local msg = ''
 
     if conflicts then
       msg = 'There are unmerged paths'
-    elseif err > 2 or no_stages then
-      msg = 'There is some problem. Will probably fail'
+    elseif (loglevel ~= 2) or not stages then
+      msg = result[1]
     end
 
     if msg ~= '' then
@@ -136,12 +135,12 @@ local function create_commit(root, optspec, msgspec, commitmsg)
 
   job.async(function()
     local cmdline = create_gitcmd(editmsg, optspec, msgspec, commitmsg)
-    local stdout, err = job.await(cmdline)
+    local loglevel, stdout = job.await(cmdline)
     signature = nil
 
-    util.notify(stdout, HEADER, err, true)
+    util.notify(stdout, HEADER, loglevel, true)
 
-    if err == 2 then
+    if loglevel == 2 then
       if is_commit_buffer then
         patch.close()
         vim.cmd.bwipeout()
@@ -281,10 +280,11 @@ local function mug_commit(name)
     end
 
     if opts.bang then
-      local log = vim.fn.system({ 'git', '-C', git_root, 'add', '.' })
+      local resp = vim.system({ 'git', '-C', git_root, 'add', '.' }):wait()
+      -- local log = vim.fn.system({ 'git', '-C', git_root, 'add', '.' })
 
-      if vim.v.shell_error == 1 then
-        util.notify(log, HEADER, 3)
+      if resp.code ~= 0 then
+        util.notify(resp.stderr, HEADER, 3)
         return
       end
     end

@@ -16,13 +16,28 @@ local function set_default(overwrite)
   method('edit_command', 'Edit', true)
   method('file_command', 'File', true)
   method('write_command', 'Write', true)
+  method('result_position', 'belowright', true)
+  method(
+    'result_log_format',
+    {
+      '--graph --date=short --format=%C(cyan)%h\\ %C(magenta)[%ad]\\ %C(reset)%s%C(auto)%d',
+      '--graph --name-status --oneline --date=short --format=%C(yellow\\ reverse)%h%C(reset)\\ %C(magenta)[%ad]%C(cyan)%an\\ %C(green)%s%C(auto)%d -10',
+    },
+    true
+  )
 
-  if _G.Mug.show_command then
-    method('show_command', 'MugShow', true)
-  end
+  if overwrite then
+    if _G.Mug.show_command then
+      method('show_command', 'MugShow', true)
+    end
 
-  if _G.Mug.term_command then
-    method('term_command', 'MugTerm', true)
+    if _G.Mug.term_command then
+      method('term_command', 'MugTerm', true)
+    end
+
+    if _G.Mug.show_command then
+      method('sub_command', 'Mug', true)
+    end
   end
 end
 
@@ -50,6 +65,8 @@ local function change_settings(opts)
     local msg = string.format('Invalid variable detected. %s', table.concat(unknown, ','))
     util.notify(msg, HEADER, 3)
   end
+
+  vim.list_extend(tbl.log_options, _G.Mug.result_log_format)
 end
 
 ---User customized settings

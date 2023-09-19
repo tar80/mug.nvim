@@ -10,8 +10,10 @@ local fn = vim.fn
 ---Set post-boot processing
 ---@param callback function
 M.post_setup_buffer = function(callback)
-  M.post_load = function()
-    callback()
+  if type(callback) == 'function' then
+    M.post_load = function()
+      callback()
+    end
   end
 end
 
@@ -26,8 +28,11 @@ M.open_buffer = function(filepath, client)
   vim.cmd(cmdline)
   vim.cmd.clearjumps()
   api.nvim_set_option_value('bufhidden', 'wipe', { scope = 'local' })
-  M.post_load()
-  M.post_load = nil
+
+  if type(M.post_load) == 'function' then
+    M.post_load()
+    M.post_load = nil
+  end
 
   local bufnr = api.nvim_get_current_buf()
   local mode = client:find(':%d+$') and 'tcp' or 'pipe'

@@ -427,7 +427,7 @@ M.term = function(tbl)
 
   local buf = create_float(win.bufnr, win.opts)
 
-  util.termopen(cmd, buf)
+  util.termopen(cmd, buf.bufnr)
   vim.api.nvim_win_set_hl_ns(0, ns_nc)
   float_win_focus_map()
   float_win_post(buf.bufnr, tbl.post)

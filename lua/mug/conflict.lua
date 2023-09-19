@@ -297,11 +297,12 @@ local function suggest_commit()
       require('mug.commit').commit_buffer(pwd, 'continue')
     elseif choice == 2 then
       local merge_msg = string.format('%s/.git/MERGE_MSG', pwd)
-      local stdout, err =
-        job.await(util.gitcmd({ cmd = 'commit', opts = { '--cleanup=strip', '--file=' .. merge_msg } }))
-      util.notify(stdout, HEADER, err, false)
+      local loglevel = job.await_term(
+        util.gitcmd({ cmd = 'commit', opts = { '--cleanup=strip', '--file=' .. merge_msg } }),
+        { name = string.format('%s://commit', HEADER) }
+      )
 
-      if err == 2 then
+      if loglevel == 2 then
         require('mug.branch').branch_name(pwd)
       end
     end
@@ -354,10 +355,10 @@ local function on_attach(files)
 
     job.async(function()
       local cmd = util.gitcmd({ cmd = 'add', opts = { files } })
-      local stdout, err = job.await(cmd)
+      local loglevel, stdout = job.await_job(cmd)
 
-      if err > 2 then
-        util.notify(stdout, HEADER, err, false)
+      if loglevel > 2 then
+        util.notify(stdout, HEADER, loglevel, false)
         return
       end
 
