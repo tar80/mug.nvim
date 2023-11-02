@@ -373,7 +373,7 @@ M.termopen = function(cmd, bufnr)
   vim.fn.termopen(cmd, {
     on_exit = function()
       if vim.api.nvim_buf_is_valid(bufnr) then
-        vim.cmd.bwipeout({ bang = true })
+        vim.cmd.bwipeout({bufnr, bang = true })
       end
     end,
   })
