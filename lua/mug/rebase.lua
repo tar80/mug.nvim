@@ -185,7 +185,7 @@ local function rebase_buffer(selected, options, hash_rb)
   job.async(function()
     local squash = selected and '--autosquash' or ''
     local cmdline = util.gitcmd({ noquotepath = true, cmd = 'rebase', opts = { squash, options, hash_rb } })
-    local ok, stdout= job.await(cmdline)
+    local ok, stdout = job.await(cmdline)
 
     if not ok then
       util.notify(stdout, HEADER, 3, true)
@@ -355,12 +355,20 @@ local function adjust_options(sign, stash, fargs)
   local gpgsign = sign == 'Sign' and gpg or nil
   local autostash = stash and '--autostash' or nil
 
-  if not vim.tbl_isempty(fargs) then
-    if not fargs[1]:find('^-') then
-      treeish = fargs[1]
-      table.remove(fargs, 1)
+  if not vim.tbl_isempty(fargs) and not fargs[1]:find('^-') then
+    treeish = fargs[1]
+    table.remove(fargs, 1)
+  end
+
+  if fargs[1] == nil then
+    if gpgsign then
+      table.insert(opts, gpgsign)
     end
 
+    if autostash then
+      table.insert(opts, autostash)
+    end
+  else
     for _, v in ipairs(fargs) do
       if gpgsign and not v:find('--gpg-sign', 1, true) then
         table.insert(opts, gpgsign)
@@ -381,7 +389,7 @@ end
 
 ---Open the MugRebase floating window
 ---@param name string Suffix of the MugRebase. `""`|`"sign"`
----@param stats table Wroktree state
+---@param stats table|nil Wroktree state
 ---@param bang boolean Has bang
 ---@param fargs table command arguments
 M.rebase_i = function(name, stats, bang, fargs)
@@ -463,13 +471,12 @@ local function mug_rebase(name)
       return
     end
 
-    local stats = vim.b.mug_branch_stats
-
     if middle_of_rebase(pwd, opts) then
       branch.branch_name(pwd, true)
       return
     end
 
+    local stats = vim.b.mug_branch_stats
     M.rebase_i(name, stats, opts.bang, opts.fargs)
   end, {
     nargs = '*',
