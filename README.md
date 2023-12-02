@@ -233,7 +233,7 @@ gitコマンドの結果を出力するバッファです。実体は`nvim_open_
 
 - result_position `string`(上書き)  
   出力バッファの起動位置です。  
-  `vertical`に加え、`topleft`、`botright`、aboveleft`、`belowright`を指定できます。
+  `vertical`に加え、`topleft`、`botright`、`aboveleft`、`belowright`を指定できます。
 
 - result_log_format `table`(上書き)
   `Mug log`の補完リストに独自の文字列を追加します。
@@ -287,7 +287,7 @@ gitコマンドの結果を出力するバッファです。実体は`nvim_open_
   }
   ```
 
-[subcommand.mp4](https://github.com/tar80/test/assets/45842304/1aadb89a-6e10-4b83-af83-22eb8ca3216d)
+[subcommand.mp4](https://github.com/tar80/mug.nvim/assets/45842304/41d497ad-c71b-4e88-bf78-07dbf160ec28)
 
 </details>
 <details>
