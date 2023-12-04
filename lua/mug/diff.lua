@@ -183,7 +183,7 @@ local function let_compare(name, ...)
 
       loglevel, stdout = job.await(util.gitcmd({ cmd = 'fetch', opts = { 'origin', branchspec } }))
 
-      if stdout:find('fatal:', 1, true) then
+      if (stdout[1] ~= nil) and (stdout[1] ~= '') and stdout:find('fatal:', 1, true) then
         local msg = string.format('Cannot fetch %s', options.treeish)
         util.notify(msg, HEADER, 2)
         return
