@@ -90,7 +90,7 @@ local function initial_idx()
         if v ~= '' and s:find(v:sub(3), 1, true) then
           len = #v:sub(3) + 1
           stat_lines[v:sub(3)] = s:sub(len)
-          lines[i] = string.format(' %s%s', v:sub(1, 2), s)
+          lines[i] = string.format(' %s%s', v:sub(1, 2), s:gsub('|','│'))
           goto continue
         end
       end
@@ -112,7 +112,7 @@ local function update_idx()
 
   if not err then
     for i, v in ipairs(lines) do
-      lines[i] = string.format(' %s%s', v, stat_lines[v:sub(3)] or '')
+      lines[i] = string.format(' %s%s', v, stat_lines[v:sub(3)] or ''):gsub('|', '│')
     end
   end
 

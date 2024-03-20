@@ -177,7 +177,8 @@ M.set_workspace_root = function(response)
   -- already been executed once, so we need to prevent double execution
   ]]
   skip_event = true
-  vim.cmd.lcd(parent_dir)
+  vim.cmd('silent! lcd ' .. parent_dir)
+  -- vim.cmd.lcd(parent_dir)
   vim.api.nvim_exec_autocmds('User', {
     group = 'mug',
     pattern = 'MugRefreshBar',
