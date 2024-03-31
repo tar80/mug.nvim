@@ -104,6 +104,7 @@ local function mug_commands()
     local slash = util.get_sep()
     local parent = util.dirpath()
     local path = opts.args ~= '' and util.normalize(parent .. slash .. opts.args, slash) or ''
+    vim.lsp.stop_client(vim.lsp.get_clients())
     vim.cmd.edit({ path, bang = opts.bang })
   end, {
     nargs = '?',
@@ -120,6 +121,7 @@ local function mug_commands()
     local slash = util.get_sep()
     local parent = util.dirpath()
     local path = util.normalize(parent .. slash .. opts.args, slash)
+    vim.lsp.stop_client(vim.lsp.get_clients())
     vim.cmd.file({ path, bang = opts.bang })
   end, {
     nargs = 1,
